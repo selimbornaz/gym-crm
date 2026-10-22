@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:test": "tsx supabase/tests/run-local.ts",
-    "bootstrap:owner": "tsx scripts/bootstrap-owner.ts"
+    "bootstrap:owner": "tsx scripts/bootstrap-owner.ts",
+    "reset:password": "tsx scripts/reset-password.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
