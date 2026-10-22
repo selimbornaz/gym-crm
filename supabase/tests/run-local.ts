@@ -266,9 +266,13 @@ async function main() {
       "select amount_paid, balance, payment_status from subscription_overview where id = $1", [subAlice]);
     assert(s.amount_paid === "30.000" && s.balance === "50.000" && s.payment_status === "partial", JSON.stringify(s));
   });
-  await test("trop-perçu refusé (60 > 50 restants)", async () => {
+  await test("trop-perçu refusé (60 > 50 restants), montant au format « 50,000 DT »", async () => {
     await expectError(as(db, users.receptionA, () => db.query(
-      "select * from record_payment($1,$2,$3,60,$4,$5)", [orgA, alice, cash, randomUUID(), subAlice])), /dépasse le reste/);
+      "select * from record_payment($1,$2,$3,60,$4,$5)", [orgA, alice, cash, randomUUID(), subAlice])), /dépasse le reste à payer \(50,000 DT\)/);
+  });
+  await test("format monétaire SQL : séparateur de milliers et virgule décimale", async () => {
+    const r = await one<{ a: string; b: string }>(db, "select private.fmt_dt(1250.5) a, private.fmt_dt(1234567.891) b");
+    assert(r.a === "1 250,500 DT" && r.b === "1 234 567,891 DT", JSON.stringify(r));
   });
   await test("montant à 4 décimales refusé", async () => {
     await expectError(as(db, users.receptionA, () => db.query(
@@ -295,9 +299,14 @@ async function main() {
       "select amount_paid, balance from subscription_overview where id = $1", [subAlice]);
     assert(s.amount_paid === "20.000" && s.balance === "60.000", JSON.stringify(s));
   });
-  await test("remboursement supérieur au restant refusé", async () => {
+  await test("remboursement supérieur au restant refusé (max. 20,000 DT)", async () => {
     await expectError(as(db, users.ownerA, () => db.query(
-      "select refund_payment($1,$2,'refund',25,'trop',$3)", [orgA, pay1, randomUUID()])), /Montant invalide/);
+      "select refund_payment($1,$2,'refund',25,'trop',$3)", [orgA, pay1, randomUUID()])), /max\. 20,000 DT remboursables/);
+  });
+  await test("le motif du remboursement figure dans le journal d'audit", async () => {
+    const a = await one<{ reason: string }>(db,
+      "select reason from audit_logs where action = 'payment_adjustments.insert' order by id desc limit 1");
+    assert(a?.reason === "Erreur de saisie", JSON.stringify(a));
   });
   await test("tableau de bord : CA du jour = 30 - 10 = 20 ; impayés = 60", async () => {
     const d = await as(db, users.ownerA, () => one<{ s: Record<string, unknown> }>(db, "select dashboard_stats($1) s", [orgA]));
