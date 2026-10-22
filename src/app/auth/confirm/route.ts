@@ -14,9 +14,17 @@ export async function GET(request: NextRequest) {
   const nextParam = searchParams.get("next") ?? "/dashboard";
   const next = nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/dashboard";
 
+  const code = searchParams.get("code");
+
   if (tokenHash && type) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
+    if (!error) return NextResponse.redirect(new URL(next, request.url));
+  } else if (code) {
+    // Modèle d'email Supabase par défaut ({{ .ConfirmationURL }}) : flux PKCE,
+    // le lien doit être ouvert dans le navigateur qui a fait la demande.
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(new URL(next, request.url));
   }
   const failure = new URL("/login", request.url);
