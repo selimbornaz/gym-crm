@@ -61,7 +61,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Présences" description={<span className="capitalize">{formatDateLong(day)}</span>} />
+      <PageHeader title="Présences" description={formatDateLong(day)} />
 
       {ctx.can("attendance.write") && isToday && <CheckInDesk preselected={preselected} />}
 

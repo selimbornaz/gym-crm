@@ -73,7 +73,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title={`Bonjour ${ctx.fullName.split(" ")[0] ?? ""}`} description={<span className="capitalize">{formatDateLong(s.today)} · {ctx.org.name}</span>} />
+      <PageHeader title={`Bonjour ${ctx.fullName.split(" ")[0] ?? ""}`} description={`${formatDateLong(s.today)} · ${ctx.org.name}`} />
 
       {financial && (
         <section aria-label="Chiffres financiers" className="grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -51,10 +51,11 @@ export function sumAmounts(values: Array<string | number>): string {
 
 const dateFmt = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric" });
 const dateLongFmt = new Intl.DateTimeFormat("fr-FR", { timeZone: TIME_ZONE, weekday: "long", day: "numeric", month: "long", year: "numeric" });
+// hourCycle h23 : horloge 24 h (sinon fr-TN peut afficher « 10:00 AM »).
 const dateTimeFmt = new Intl.DateTimeFormat(LOCALE, {
-  timeZone: TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  timeZone: TIME_ZONE, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
 });
-const timeFmt = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit" });
+const timeFmt = new Intl.DateTimeFormat(LOCALE, { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 /** Une date SQL "2026-10-22" représente un jour civil : on l'affiche sans conversion de fuseau. */
 function parseDateOnly(value: string): Date {
@@ -67,9 +68,11 @@ export function formatDate(value: string | Date | null | undefined): string {
   return dateFmt.format(d);
 }
 
+/** « Jeudi 22 octobre 2026 » : seule la première lettre en majuscule (usage français). */
 export function formatDateLong(value: string | Date): string {
   const d = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? parseDateOnly(value) : new Date(value);
-  return dateLongFmt.format(d);
+  const s = dateLongFmt.format(d);
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {

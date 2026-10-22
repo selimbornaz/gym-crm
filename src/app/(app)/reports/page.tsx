@@ -80,9 +80,9 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 <CardContent>
                   <dl className="grid gap-2 text-sm">
                     <Line label="Encaissements bruts" value={p.gross} />
-                    <Line label="Remboursements" value={-p.refunds} />
+                    <Line label="Remboursements" value={Number(p.refunds) > 0 ? -p.refunds : 0} />
                     <Line label="Encaissements nets" value={p.net_revenue} strong />
-                    <Line label="Dépenses" value={-p.expenses} />
+                    <Line label="Dépenses" value={Number(p.expenses) > 0 ? -p.expenses : 0} />
                     <div className="mt-2 border-t pt-2">
                       <Line label="Résultat" value={p.result} strong tone={p.result >= 0 ? "success" : "danger"} />
                     </div>
