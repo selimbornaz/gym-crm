@@ -41,7 +41,7 @@ export function AppShell(props: ShellProps) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-card lg:flex">
+      <aside className="no-print sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-background lg:flex">
         <Brand orgName={props.orgName} />
         <NavLinks sections={sections} />
       </aside>
@@ -55,7 +55,7 @@ export function AppShell(props: ShellProps) {
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/90 px-4 backdrop-blur md:px-6">
+        <header className="no-print sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/70 px-4 backdrop-blur-xl backdrop-saturate-150 md:px-6">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Ouvrir le menu">
             <Menu />
           </Button>
@@ -85,13 +85,13 @@ export function AppShell(props: ShellProps) {
 
 function Brand({ orgName }: { orgName: string }) {
   return (
-    <div className="flex h-14 items-center gap-2 border-b px-5">
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <Dumbbell className="size-4" aria-hidden />
+    <div className="flex h-14 items-center gap-2.5 px-4">
+      <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-950 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.15),0_1px_2px_rgb(0_0_0/0.2)] dark:from-zinc-200 dark:to-zinc-400 dark:text-zinc-950">
+        <Dumbbell className="size-3.5" strokeWidth={2} aria-hidden />
       </span>
       <div className="min-w-0 leading-tight">
-        <p className="text-sm font-semibold">Gym CRM</p>
-        <p className="truncate text-xs text-muted-foreground">{orgName}</p>
+        <p className="text-[13px] font-semibold tracking-[-0.01em]">Gym CRM</p>
+        <p className="truncate text-[11px] text-muted-foreground">{orgName}</p>
       </div>
     </div>
   );
@@ -100,11 +100,11 @@ function Brand({ orgName }: { orgName: string }) {
 function NavLinks({ sections, onNavigate }: { sections: ReturnType<typeof visibleSections>; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex-1 overflow-y-auto p-3" aria-label="Navigation principale">
+    <nav className="flex-1 overflow-y-auto px-3 pb-3 pt-1" aria-label="Navigation principale">
       {sections.map((section) => (
-        <div key={section.title} className="mb-4">
-          <p className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{section.title}</p>
-          <ul className="grid gap-0.5">
+        <div key={section.title} className="mb-5">
+          <p className="text-eyebrow mb-1.5 px-2.5">{section.title}</p>
+          <ul className="grid gap-px">
             {section.items.map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
               return (
@@ -114,11 +114,17 @@ function NavLinks({ sections, onNavigate }: { sections: ReturnType<typeof visibl
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                      active ? "bg-accent font-medium text-accent-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                      "group flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-all duration-300 ease-out",
+                      active
+                        ? "edge-highlight bg-card font-medium text-foreground shadow-card ring-1 ring-border"
+                        : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
                     )}
                   >
-                    <Icon className="size-4" aria-hidden />
+                    <Icon
+                      className={cn("size-4 transition-colors duration-300 ease-out", active ? "text-foreground" : "text-subtle-foreground group-hover:text-foreground")}
+                      strokeWidth={1.75}
+                      aria-hidden
+                    />
                     {label}
                   </Link>
                 </li>

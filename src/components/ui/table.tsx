@@ -4,31 +4,26 @@ import { cn } from "@/lib/utils";
 /** Tableau responsive : défilement horizontal sur petit écran plutôt que débordement. */
 export function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div className="w-full overflow-x-auto rounded-xl border bg-card">
-      <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <div className="edge-highlight w-full overflow-x-auto rounded-xl border bg-card shadow-card">
+      <table className={cn("w-full caption-bottom text-[13px]", className)} {...props} />
     </div>
   );
 }
 
 export function THead({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead className={cn("border-b bg-muted/40 text-left", className)} {...props} />;
+  return <thead className={cn("border-b text-left", className)} {...props} />;
 }
 
 export function TBody({ className, ...props }: React.ComponentProps<"tbody">) {
-  return <tbody className={cn("divide-y", className)} {...props} />;
+  return <tbody className={cn("divide-y divide-border/70", className)} {...props} />;
 }
 
 export function Tr({ className, ...props }: React.ComponentProps<"tr">) {
-  return <tr className={cn("transition-colors hover:bg-muted/30", className)} {...props} />;
+  return <tr className={cn("transition-colors duration-300 ease-out hover:bg-accent/40", className)} {...props} />;
 }
 
 export function Th({ className, ...props }: React.ComponentProps<"th">) {
-  return (
-    <th
-      className={cn("h-10 whitespace-nowrap px-4 text-xs font-medium uppercase tracking-wide text-muted-foreground", className)}
-      {...props}
-    />
-  );
+  return <th className={cn("text-eyebrow h-10 whitespace-nowrap px-4 font-medium", className)} {...props} />;
 }
 
 export function Td({ className, ...props }: React.ComponentProps<"td">) {

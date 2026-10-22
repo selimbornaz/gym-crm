@@ -23,11 +23,20 @@ const tndCompact = new Intl.NumberFormat(LOCALE, {
 /** "90.5" | 90.5 -> "90,500 DT". Affichage uniquement. */
 export function formatMoney(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—";
-  return tndFormatter.format(Number(value));
+  return widenSpaces(tndFormatter.format(Number(value)));
 }
 
 export function formatMoneyCompact(value: string | number): string {
-  return tndCompact.format(Number(value));
+  return widenSpaces(tndCompact.format(Number(value)));
+}
+
+/**
+ * L'ICU sépare les milliers par une espace fine insécable (U+202F), quasi
+ * invisible en Geist à grande taille (« 2130,000 »). On la remplace par une
+ * espace insécable normale : « 2 130,000 DT », sans coupure de ligne.
+ */
+function widenSpaces(s: string): string {
+  return s.replace(/ /g, " ");
 }
 
 /**
@@ -81,6 +90,19 @@ export function formatDateTime(value: string | Date | null | undefined): string 
 
 export function formatTime(value: string | Date | null | undefined): string {
   return value ? timeFmt.format(new Date(value)) : "—";
+}
+
+const relativeFmt = new Intl.RelativeTimeFormat("fr", { numeric: "auto", style: "short" });
+
+/** « il y a 3 h », « hier », « dans 2 j » — pour les métadonnées d'activité. */
+export function formatRelative(value: string | Date, now = new Date()): string {
+  const diff = (new Date(value).getTime() - now.getTime()) / 1000;
+  const abs = Math.abs(diff);
+  if (abs < 60) return "à l'instant";
+  if (abs < 3600) return relativeFmt.format(Math.round(diff / 60), "minute");
+  if (abs < 86_400) return relativeFmt.format(Math.round(diff / 3600), "hour");
+  if (abs < 86_400 * 30) return relativeFmt.format(Math.round(diff / 86_400), "day");
+  return relativeFmt.format(Math.round(diff / (86_400 * 30)), "month");
 }
 
 /** Date du jour à Tunis au format "YYYY-MM-DD". */
