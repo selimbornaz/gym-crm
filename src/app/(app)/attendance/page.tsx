@@ -3,7 +3,8 @@ import Link from "next/link";
 import { LogIn, ShieldAlert, Users } from "lucide-react";
 import { ActionDialogButton, CorrectAttendanceDialog } from "./attendance-dialogs";
 import { PageHeader } from "@/components/app/page-header";
-import { StatCard } from "@/components/app/stat-card";
+import { MetricStrip } from "@/components/app/metric-strip";
+import { InitialsAvatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,48 +61,64 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const overrides = valid.filter((r) => r.override_reason).length;
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageHeader title="Présences" description={formatDateLong(day)} />
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+      <PageHeader
+        title="Présences"
+        description={formatDateLong(day)}
+        actions={
+          <form method="get" className="flex items-center gap-2">
+            <label htmlFor="date" className="sr-only">Afficher le jour</label>
+            <Input id="date" name="date" type="date" defaultValue={day} max={today} className="w-auto" />
+            <Button type="submit" variant="outline">Afficher</Button>
+            {!isToday && <Button asChild variant="ghost"><Link href="/attendance">Aujourd&apos;hui</Link></Button>}
+          </form>
+        }
+      />
 
       {ctx.can("attendance.write") && isToday && <CheckInDesk preselected={preselected} />}
 
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-3">
-        <StatCard label={isToday ? "Entrées aujourd'hui" : "Entrées"} value={String(valid.length)} icon={LogIn} />
-        {isToday && <StatCard label="Encore présents" value={String(present)} icon={Users} />}
-        <StatCard label="Entrées forcées" value={String(overrides)} icon={ShieldAlert} tone={overrides > 0 ? "warning" : undefined} hint="Avec dérogation du propriétaire" />
-      </section>
+      <MetricStrip
+        metrics={[
+          { label: isToday ? "Entrées aujourd'hui" : "Entrées", icon: LogIn, value: valid.length },
+          ...(isToday ? [{ label: "Sur place", icon: Users, value: present, hint: "Entrés, sans sortie enregistrée" }] : []),
+          { label: "Entrées forcées", icon: ShieldAlert, value: overrides, tone: overrides > 0 ? ("warning" as const) : undefined, hint: "Dérogations du propriétaire" },
+        ]}
+      />
 
-      <form method="get" className="flex flex-wrap items-end gap-2">
-        <div className="grid gap-1">
-          <label htmlFor="date" className="text-sm font-medium">Historique du</label>
-          <Input id="date" name="date" type="date" defaultValue={day} max={today} className="bg-card" />
-        </div>
-        <Button type="submit" variant="secondary">Afficher</Button>
-        {!isToday && <Button asChild variant="ghost"><Link href="/attendance">Aujourd&apos;hui</Link></Button>}
-      </form>
-
+      <section className="flex flex-col gap-3">
+        <h2 className="text-eyebrow">Journal du jour</h2>
       {rows.length === 0 ? (
-        <p className="rounded-xl border border-dashed bg-card px-4 py-8 text-center text-sm text-muted-foreground">Aucun passage ce jour-là.</p>
+        <p className="rounded-xl border border-dashed px-4 py-10 text-center text-[13px] text-muted-foreground">Aucun passage ce jour-là.</p>
       ) : (
         <Table>
           <THead>
             <tr><Th>Membre</Th><Th>Entrée</Th><Th>Sortie</Th><Th>Méthode</Th><Th>Remarque</Th><Th /></tr>
           </THead>
           <TBody>
-            {rows.map((r) => (
+            {rows.map((r) => {
+              const name = r.member ? `${r.member.first_name} ${r.member.last_name}` : "—";
+              return (
               <Tr key={r.id} className={r.status === "voided" ? "opacity-50" : undefined}>
                 <Td>
-                  <Link href={`/members/${r.member_id}`} className="font-medium hover:underline">
-                    {r.member ? `${r.member.first_name} ${r.member.last_name}` : "—"}
+                  <Link href={`/members/${r.member_id}`} className="group flex items-center gap-3">
+                    <InitialsAvatar name={name} className="size-7 text-[10px]" />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium transition-colors duration-300 ease-out group-hover:text-foreground group-hover:underline">{name}</span>
+                      <span className="block font-mono text-[11px] text-subtle-foreground">{r.member?.member_code}</span>
+                    </span>
                   </Link>
-                  <p className="font-mono text-xs text-muted-foreground">{r.member?.member_code}</p>
                 </Td>
-                <Td className="tabular-nums">{formatTime(r.checked_in_at)}</Td>
-                <Td className="tabular-nums">{formatTime(r.checked_out_at)}</Td>
-                <Td>{t.checkinMethod[r.method]}</Td>
-                <Td className="text-xs">
+                <Td className="tabular-nums">
+                  <span className="flex items-center gap-2">
+                    <span className={`size-1.5 rounded-full ${r.status === "voided" ? "bg-zinc-400" : r.checked_out_at ? "bg-zinc-300 dark:bg-zinc-600" : "bg-emerald-500"}`} aria-hidden />
+                    {formatTime(r.checked_in_at)}
+                  </span>
+                </Td>
+                <Td className="tabular-nums text-muted-foreground">{r.checked_out_at ? formatTime(r.checked_out_at) : "…"}</Td>
+                <Td><Badge variant="outline">{t.checkinMethod[r.method]}</Badge></Td>
+                <Td className="text-[12px]">
                   {r.status === "voided" && <Badge variant="secondary">Annulé</Badge>}
-                  {r.override_reason && <Badge variant="warning">Dérogation : {r.override_reason}</Badge>}
+                  {r.override_reason && <Badge variant="warning" dot>Dérogation : {r.override_reason}</Badge>}
                   {r.correction_reason && <span className="block text-muted-foreground">Corrigé : {r.correction_reason}</span>}
                 </Td>
                 <Td className="text-right">
@@ -113,10 +130,12 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
                   </div>
                 </Td>
               </Tr>
-            ))}
+              );
+            })}
           </TBody>
         </Table>
       )}
+      </section>
     </div>
   );
 }

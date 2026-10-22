@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Users } from "lucide-react";
 import { ActionDialog } from "@/components/app/action-dialog";
+import { AvatarStack, InitialsAvatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/form";
@@ -136,18 +137,37 @@ export function SessionCard({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "rounded-lg border bg-background p-2 text-left text-xs transition-colors hover:border-ring/50",
-          session.kind === "personal_training" && "border-l-4 border-l-chart-2",
-          session.kind === "group_class" && "border-l-4 border-l-chart-1",
-          cancelled && "opacity-50 line-through",
+          "gradient-border edge-highlight group relative overflow-hidden rounded-lg border bg-card py-2 pl-3 pr-2 text-left shadow-card",
+          "transition-all duration-300 ease-out hover:-translate-y-px hover:shadow-card-hover",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+          cancelled && "opacity-50",
         )}
       >
-        <p className="font-semibold tabular-nums">{formatTime(session.starts_at)}–{formatTime(session.ends_at)}</p>
-        <p className="font-medium">{session.title}</p>
-        {session.coach && <p className="text-muted-foreground">{session.coach.full_name}</p>}
-        <p className={cn("mt-1 flex items-center gap-1", full ? "text-danger" : "text-muted-foreground")}>
-          <Users className="size-3" aria-hidden /> {booked}/{session.capacity}{full && " · complet"}
+        <span
+          aria-hidden
+          className={cn("absolute inset-y-1.5 left-1 w-0.5 rounded-full", session.kind === "personal_training" ? "bg-chart-2" : "bg-chart-1")}
+        />
+        <p className="text-[11px] font-medium tabular-nums text-muted-foreground">
+          {formatTime(session.starts_at)} – {formatTime(session.ends_at)}
         </p>
+        <p className={cn("mt-0.5 truncate text-[12px] font-medium tracking-[-0.01em]", cancelled && "line-through")}>{session.title}</p>
+        {session.coach && (
+          <p className="mt-1 flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
+            <InitialsAvatar name={session.coach.full_name} className="size-4 text-[7px]" />
+            {session.coach.full_name}
+          </p>
+        )}
+        <div className="mt-2 flex items-center gap-2">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500 ease-out", full ? "bg-red-500" : "bg-chart-1")}
+              style={{ width: `${Math.max(4, Math.min(100, (booked / session.capacity) * 100))}%` }}
+            />
+          </div>
+          <span className={cn("flex items-center gap-0.5 text-[10px] tabular-nums", full ? "font-medium text-red-600 dark:text-red-400" : "text-subtle-foreground")}>
+            <Users className="size-3" strokeWidth={1.75} aria-hidden /> {booked}/{session.capacity}
+          </span>
+        </div>
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -155,20 +175,20 @@ export function SessionCard({
           <SheetHeader>
             <SheetTitle>{session.title}</SheetTitle>
             <SheetDescription asChild>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="mt-1 flex flex-wrap items-center gap-2">
                 <Badge variant="outline">{t.sessionKind[session.kind]}</Badge>
-                <Badge variant={cancelled ? "secondary" : "success"}>{t.sessionStatus[session.status]}</Badge>
-                <span>{formatDateTime(session.starts_at)} → {formatTime(session.ends_at)}</span>
+                <Badge variant={cancelled ? "secondary" : "success"} dot={!cancelled}>{t.sessionStatus[session.status]}</Badge>
+                <span className="text-[12px] tabular-nums">{formatDateTime(session.starts_at)} → {formatTime(session.ends_at)}</span>
               </div>
             </SheetDescription>
           </SheetHeader>
-          <div className="grid flex-1 content-start gap-5 overflow-y-auto p-6 text-sm">
-            <dl className="grid grid-cols-2 gap-3">
-              <div><dt className="text-xs text-muted-foreground">Coach</dt><dd>{session.coach?.full_name ?? "—"}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Salle</dt><dd>{session.room ?? "—"}</dd></div>
-              <div><dt className="text-xs text-muted-foreground">Places</dt><dd>{booked} / {session.capacity}</dd></div>
+          <div className="grid flex-1 content-start gap-6 overflow-y-auto p-6 text-[13px]">
+            <dl className="edge-highlight grid grid-cols-3 divide-x overflow-hidden rounded-xl border bg-background/60">
+              <div className="px-3 py-2.5"><dt className="text-eyebrow">Coach</dt><dd className="mt-1.5 truncate font-medium">{session.coach?.full_name ?? "—"}</dd></div>
+              <div className="px-3 py-2.5"><dt className="text-eyebrow">Salle</dt><dd className="mt-1.5 truncate font-medium">{session.room ?? "—"}</dd></div>
+              <div className="px-3 py-2.5"><dt className="text-eyebrow">Places</dt><dd className={cn("mt-1.5 font-medium tabular-nums", full && "text-red-600 dark:text-red-400")}>{booked} / {session.capacity}</dd></div>
             </dl>
-            {session.notes && <p className="text-muted-foreground">{session.notes}</p>}
+            {session.notes && <p className="rounded-lg bg-secondary/50 p-3 text-muted-foreground">{session.notes}</p>}
 
             {canBook && !cancelled && !full && new Date(session.starts_at) > new Date() && (
               <ActionDialog trigger={<Button variant="outline">Inscrire un membre</Button>} title="Inscrire un membre" action={bookMember} submitLabel="Inscrire">
@@ -189,16 +209,20 @@ export function SessionCard({
             )}
 
             <div>
-              <h3 className="mb-2 font-medium">Participants</h3>
+              <h3 className="text-eyebrow mb-2 flex items-center gap-2">
+                Participants
+                <AvatarStack names={active.map((b) => (b.member ? `${b.member.first_name} ${b.member.last_name}` : "Membre"))} max={5} size="size-5" />
+              </h3>
               {active.length === 0 ? (
-                <p className="text-muted-foreground">Aucune inscription.</p>
+                <p className="rounded-lg border border-dashed px-3 py-6 text-center text-muted-foreground">Aucune inscription.</p>
               ) : (
-                <ul className="divide-y rounded-lg border">
+                <ul className="divide-y divide-border/70 overflow-hidden rounded-xl border">
                   {active.map((b) => (
-                    <li key={b.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                      <span>
-                        {b.member ? `${b.member.first_name} ${b.member.last_name}` : "Membre"}
-                        <Badge variant="outline" className="ml-2">{t.bookingStatus[b.status]}</Badge>
+                    <li key={b.id} className="flex items-center justify-between gap-2 px-3 py-2 transition-colors duration-300 ease-out hover:bg-accent/30">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <InitialsAvatar name={b.member ? `${b.member.first_name} ${b.member.last_name}` : "Membre"} className="size-6 text-[9px]" />
+                        <span className="truncate">{b.member ? `${b.member.first_name} ${b.member.last_name}` : "Membre"}</span>
+                        <Badge variant={b.status === "attended" ? "success" : b.status === "no_show" ? "danger" : "outline"}>{t.bookingStatus[b.status]}</Badge>
                       </span>
                       {canBook && b.status === "booked" && (
                         <span className="flex gap-1">
@@ -215,7 +239,7 @@ export function SessionCard({
 
             {canManage && !cancelled && (
               <ActionDialog
-                trigger={<Button variant="ghost" className="justify-self-start text-danger">Annuler la séance</Button>}
+                trigger={<Button variant="ghost" className="justify-self-start text-danger hover:text-danger">Annuler la séance</Button>}
                 title="Annuler cette séance ?"
                 description="Les participants inscrits devront être prévenus."
                 action={cancelSession}

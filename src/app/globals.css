@@ -160,6 +160,10 @@
   ::selection {
     background: rgb(99 102 241 / 0.22);
   }
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--brand);
+  }
   /* Respect des préférences d'accessibilité : pas d'animation forcée. */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

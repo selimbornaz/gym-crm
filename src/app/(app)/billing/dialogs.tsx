@@ -129,7 +129,7 @@ export function SubscriptionManageButtons({ sub }: { sub: SubscriptionRow }) {
   if (sub.status === "cancelled") return null;
 
   return (
-    <div className="flex flex-wrap justify-end gap-1">
+    <div className="flex justify-end gap-1 whitespace-nowrap">
       <ActionDialog
         trigger={<Button size="sm" variant="ghost">Prolonger</Button>}
         title="Prolonger l'abonnement"

@@ -26,12 +26,14 @@ export function MemberPhoto({
   photoUrl,
   canEdit,
   name,
+  size = "size-28",
 }: {
   memberId: string;
   orgId: string;
   photoUrl: string | null;
   canEdit: boolean;
   name: string;
+  size?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -59,9 +61,9 @@ export function MemberPhoto({
     <div className="relative">
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- URL signée temporaire
-        <img src={photoUrl} alt={`Photo de ${name}`} className="size-28 rounded-full border object-cover" />
+        <img src={photoUrl} alt={`Photo de ${name}`} className={`${size} rounded-2xl object-cover ring-1 ring-border`} />
       ) : (
-        <InitialsAvatar name={name} className="size-28 text-2xl" />
+        <InitialsAvatar name={name} className={`${size} rounded-2xl text-lg`} />
       )}
       {canEdit && (
         <>
@@ -81,7 +83,7 @@ export function MemberPhoto({
             type="button"
             size="icon"
             variant="secondary"
-            className="absolute bottom-0 right-0 rounded-full border"
+            className="absolute -bottom-1.5 -right-1.5 size-7 rounded-full border bg-card shadow-card [&_svg]:size-3.5"
             onClick={() => input.current?.click()}
             disabled={busy}
             aria-label="Changer la photo"
