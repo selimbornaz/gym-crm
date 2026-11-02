@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+  <title>Castle CRM · Connexion requise</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+      background: radial-gradient(40rem 26rem at 50% 30%, rgb(232 38 42 / 0.16), transparent 70%), #0a0808;
+      color: #f7f3f1; font: 14px/1.5 "Segoe UI", system-ui, sans-serif; text-align: center;
+    }
+    main { max-width: 26rem; }
+    svg { height: 112px; width: auto; }
+    .name { margin: 18px 0 0; padding-left: 0.3em; font-size: 17px; font-weight: 600; letter-spacing: 0.3em; }
+    h1 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; }
+    p { margin: 0; color: #a89f9c; }
+    a {
+      display: inline-block; margin-top: 22px; padding: 9px 20px; border-radius: 8px;
+      background: #e8262a; color: #fff; font-weight: 600; text-decoration: none;
+    }
+    a:hover { filter: brightness(1.1); }
+    a:focus-visible { outline: 2px solid #ff4a4d; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <svg viewBox="428 445 629 1031" fill="#e8262a" aria-hidden="true">
+      <polygon points="742,445 847,505 847,605 965,673 965,574 1057,627 1057,829 742,648 428,829 428,627 518,574 518,673 637,605 637,505"/>
+      <polygon points="742,750 1056,932 961,987 742,862 525,987 525,1240 742,1364 961,1239 1056,1294 742,1476 428,1295 428,931"/>
+      <polygon points="742,965 871,1039 833,1062 742,1010 653,1062 653,1165 742,1216 833,1165 833,1138 741,1138 741,1097 873,1097 873,1188 742,1262 613,1188 613,1039"/>
+    </svg>
+    <p class="name">CASTLE</p>
+    <h1>Connexion Internet requise</h1>
+    <p>Cette version a besoin d'Internet. Le CRM reviendra tout seul dès que la connexion sera rétablie.</p>
+    <a id="retry" href="#">Réessayer</a>
+  </main>
+  <script>
+    const target = new URLSearchParams(location.search).get("url");
+    document.getElementById("retry").addEventListener("click", (event) => {
+      event.preventDefault();
+      if (target) location.href = target;
+    });
+  </script>
+</body>
+</html>

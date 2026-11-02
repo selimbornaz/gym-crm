@@ -10,3 +10,6 @@ backup-v1-prisma.tar.gz
 
 # Exports locaux de données personnelles
 backups/
+
+# Application de bureau : fichiers générés
+desktop/dist/
