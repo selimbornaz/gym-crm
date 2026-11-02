@@ -48,6 +48,10 @@ delete from public.equipment           where organization_id = '757a8c68-0180-46
 delete from public.notifications       where organization_id = '757a8c68-0180-4648-a57b-80288b76a72b';
 delete from public.announcements       where organization_id = '757a8c68-0180-4648-a57b-80288b76a72b';
 
+-- Journal de synchronisation (migration 0010) : ses triggers différés doivent
+-- s'exécuter avant de pouvoir modifier les tables.
+set constraints all immediate;
+
 alter table public.payments enable trigger payments_immutable;
 alter table public.payment_adjustments enable trigger adjustments_immutable;
 

@@ -498,6 +498,366 @@ async function main() {
     assert(r.length > 0 && r.every((x) => x.recipient_user_id === users.receptionA), "fuite");
   });
 
+  console.log("\nSynchronisation : postes");
+  type OpResult = {
+    status: string; replayed: boolean; error_message: string | null;
+    result: Record<string, string> | null; conflicts: Array<Record<string, unknown>> | null;
+  };
+  const deviceA = randomUUID();
+  const deviceB = randomUUID();
+  const op = async (user: string, device: string, kind: string, args: unknown, occurredAt?: Date, opId = randomUUID()) =>
+    (await asCommit(db, user, () => one<{ r: OpResult }>(db,
+      "select sync_apply_op($1,$2,$3,$4,$5,$6) r", [orgA, device, opId, kind, args, occurredAt ?? null]))).r;
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000);
+
+  await test("enregistrement idempotent, une série permanente par poste", async () => {
+    const reg = (user: string, device: string) => asCommit(db, user, () => one<{ r: { series: string } }>(db,
+      "select sync_register_device($1,$2,'Accueil') r", [orgA, device]));
+    assert((await reg(users.receptionA, deviceA)).r.series === "A", "série du premier poste");
+    assert((await reg(users.receptionA, deviceA)).r.series === "A", "série modifiée au 2e appel");
+    assert((await reg(users.ownerA, deviceB)).r.series === "B", "série du second poste");
+    assert((await reg(users.coachA, randomUUID())).r.series === "C", "un coach enregistre aussi son poste");
+  });
+  await test("un compte d'une autre salle ne peut ni enregistrer un poste ni lire le journal", async () => {
+    await expectError(as(db, users.ownerB, () => db.query("select sync_register_device($1,$2)", [orgA, randomUUID()])), /non autorisée/);
+    await expectError(as(db, users.ownerB, () => db.query("select sync_changes($1, 0)", [orgA])), /non autorisée/);
+  });
+  await test("un poste inconnu ne peut rien rejouer", async () => {
+    await expectError(op(users.receptionA, randomUUID(), "check_in", {}), /non enregistré/);
+  });
+  await test("le rôle anonyme ne peut pas appeler les fonctions de synchronisation", async () => {
+    await db.query("begin");
+    await db.query("set local role anon");
+    try {
+      await expectError(db.query("select sync_changes($1, 0)", [orgA]), /permission denied/);
+    } finally {
+      await db.query("rollback");
+    }
+  });
+
+  console.log("\nSynchronisation : journal des changements");
+  const head = async (user = users.ownerA) => (await as(db, user, () => one<{ r: { head: number } }>(db,
+    "select sync_changes($1, null) r", [orgA]))).r.head;
+  const since = async (cursor: number) => (await as(db, users.ownerA, () => one<{
+    r: { changes: Array<{ table: string; id: string; op: string; seq: number }>; next_since: number; has_more: boolean };
+  }>(db, "select sync_changes($1, $2) r", [orgA, cursor]))).r;
+
+  let program = "";
+  await test("création, modification et suppression sont journalisées, dans l'ordre", async () => {
+    const start = await head();
+    program = (await asCommit(db, users.ownerA, () => one<{ id: string }>(db,
+      "insert into workout_programs (organization_id, name) values ($1,'Journal') returning id", [orgA]))).id;
+    await asCommit(db, users.ownerA, () => db.query("update workout_programs set name = 'Journal 2' where id = $1", [program]));
+    await asCommit(db, users.ownerA, () => db.query("delete from workout_programs where id = $1", [program]));
+    const c = (await since(start)).changes.filter((x) => x.table === "workout_programs" && x.id === program);
+    assert(c.map((x) => x.op).join("") === "IUD", JSON.stringify(c));
+    assert(c[0]!.seq < c[1]!.seq && c[1]!.seq < c[2]!.seq, "ordre");
+  });
+  await test("le journal ne contient rien d'une transaction annulée", async () => {
+    const start = await head();
+    await as(db, users.ownerA, () => db.query("insert into workout_programs (organization_id, name) values ($1,'Annulé')", [orgA]));
+    assert((await since(start)).changes.length === 0, "entrée fantôme");
+  });
+  await test("les salles ont chacune leur journal", async () => {
+    const start = await head();
+    await asCommit(db, users.ownerB, () => db.query("insert into workout_programs (organization_id, name) values ($1,'Salle B')", [orgB]));
+    assert((await since(start)).changes.length === 0, "changement d'une autre salle visible");
+  });
+  await test("pagination : le curseur reprend là où il s'est arrêté", async () => {
+    const start = await head();
+    for (const n of ["P1", "P2", "P3"]) {
+      await asCommit(db, users.ownerA, () => db.query("insert into workout_programs (organization_id, name) values ($1,$2)", [orgA, n]));
+    }
+    const page = await as(db, users.ownerA, () => one<{ r: { changes: unknown[]; next_since: number; has_more: boolean } }>(db,
+      "select sync_changes($1,$2,1) r", [orgA, start]));
+    assert(page.r.changes.length === 1 && page.r.has_more, JSON.stringify(page.r));
+    assert((await since(page.r.next_since)).changes.length >= 2, "reprise incomplète");
+  });
+  await test("journal purgé : le poste en retard doit tout relire", async () => {
+    await db.query("begin");
+    await db.query("select private.sync_prune(interval '0 seconds')");
+    await db.query("set local role authenticated");
+    await db.query("select set_config('request.jwt.claim.sub', $1, true)", [users.ownerA]);
+    const behind = await one<{ r: { resync_required: boolean } }>(db, "select sync_changes($1, 0) r", [orgA]);
+    const current = await one<{ r: { head: number } }>(db, "select sync_changes($1, null) r", [orgA]);
+    const upToDate = await one<{ r: { resync_required: boolean } }>(db, "select sync_changes($1, $2) r", [orgA, current.r.head]);
+    await db.query("rollback");
+    assert(behind.r.resync_required, "poste en retard non détecté");
+    assert(!upToDate.r.resync_required, "poste à jour renvoyé vers une relecture complète");
+  });
+  await test("la version de ligne est attribuée par le serveur et augmente à chaque modification", async () => {
+    const before = await one<{ v: string }>(db, "select row_version v from members where id = $1", [alice]);
+    await asCommit(db, users.ownerA, () => db.query("update members set first_name = 'Alice' where id = $1", [alice]));
+    const after = await one<{ v: string }>(db, "select row_version v from members where id = $1", [alice]);
+    assert(Number(after.v) === Number(before.v) + 1, `${before.v} -> ${after.v}`);
+  });
+
+  console.log("\nSynchronisation : rejeu sans doublon");
+  await test("le même envoi deux fois (réseau coupé) ne crée qu'un seul passage", async () => {
+    const opId = randomUUID();
+    const at = hoursAgo(2);
+    const first = await op(users.receptionA, deviceA, "check_in", { member: alice, method: "search" }, at, opId);
+    const second = await op(users.receptionA, deviceA, "check_in", { member: alice, method: "search" }, at, opId);
+    assert(first.status === "applied" && !first.replayed, JSON.stringify(first));
+    assert(second.replayed && second.result?.attendance_id === first.result?.attendance_id, JSON.stringify(second));
+    const n = await one<{ n: string }>(db, "select count(*) n from attendance where id = $1", [first.result!.attendance_id]);
+    assert(n.n === "1", `${n.n} passages`);
+  });
+  await test("un identifiant d'opération ne peut pas être réutilisé par un autre compte", async () => {
+    const opId = randomUUID();
+    await op(users.receptionA, deviceA, "check_in", { member: alice, method: "search" }, hoursAgo(5), opId);
+    await expectError(op(users.ownerA, deviceB, "check_in", { member: alice, method: "search" }, hoursAgo(5), opId), /autre compte/);
+  });
+  await test("le passage garde son heure réelle et l'identifiant créé sur le poste", async () => {
+    const at = hoursAgo(24);
+    const rowId = randomUUID();
+    const r = await op(users.receptionA, deviceA, "check_in", { member: alice, method: "qr", row_id: rowId }, at);
+    assert(r.result?.attendance_id === rowId, JSON.stringify(r));
+    const a = await one<{ t: Date }>(db, "select checked_in_at t from attendance where id = $1", [rowId]);
+    assert(Math.abs(a.t.getTime() - at.getTime()) < 1000, `${a.t.toISOString()} vs ${at.toISOString()}`);
+  });
+  await test("deux postes scannent le même membre : second passage reconnu comme doublon", async () => {
+    const at = hoursAgo(30);
+    const r1 = await op(users.receptionA, deviceA, "check_in", { member: alice, method: "qr" }, at);
+    const r2 = await op(users.ownerA, deviceB, "check_in", { member: alice, method: "qr" }, new Date(at.getTime() + 60_000));
+    assert(r2.result?.result === "duplicate" && r2.result?.attendance_id === r1.result?.attendance_id, JSON.stringify(r2));
+  });
+  await test("sortie hors ligne enregistrée à son heure réelle", async () => {
+    const rowId = randomUUID();
+    await op(users.receptionA, deviceA, "check_in", { member: alice, method: "qr", row_id: rowId }, hoursAgo(40));
+    const out = hoursAgo(39);
+    const r = await op(users.receptionA, deviceA, "check_out", { attendance: rowId }, out);
+    assert(r.status === "applied", JSON.stringify(r));
+    const a = await one<{ t: Date }>(db, "select checked_out_at t from attendance where id = $1", [rowId]);
+    assert(Math.abs(a.t.getTime() - out.getTime()) < 1000, a.t.toISOString());
+  });
+  await test("abonnement expiré entre-temps : le passage réel est conservé et tracé", async () => {
+    const dali = (await asCommit(db, users.receptionA, () => one<{ id: string }>(db,
+      "insert into members (organization_id, first_name, last_name) values ($1,'Dali','SansAbo') returning id", [orgA]))).id;
+    const r = await op(users.receptionA, deviceA, "check_in", { member: dali, method: "search" }, hoursAgo(1));
+    assert(r.status === "applied" && r.result?.result === "granted", JSON.stringify(r));
+    const a = await one<{ override_reason: string }>(db, "select override_reason from attendance where id = $1", [r.result!.attendance_id]);
+    assert(a.override_reason.startsWith("Hors ligne :"), a.override_reason);
+    const audit = await one<{ n: string }>(db, "select count(*) n from audit_logs where action = 'attendance.override' and entity_id = $1", [r.result!.attendance_id]);
+    assert(audit.n === "1", "écart non tracé");
+  });
+  await test("hors rejeu, la règle web reste inchangée : même membre refusé sans motif", async () => {
+    const dali = await one<{ id: string }>(db, "select id from members where first_name = 'Dali'");
+    await db.query("update attendance set status = 'voided' where member_id = $1", [dali.id]);
+    const r = await as(db, users.receptionA, () => one<{ r: { result: string } }>(db, "select check_in($1,$2,'search') r", [orgA, dali.id]));
+    assert(r.r.result === "denied", JSON.stringify(r.r));
+  });
+
+  console.log("\nSynchronisation : numéros par poste");
+  const newMember = (code: string, device = deviceA, user = users.receptionA) => op(user, device, "row.insert", {
+    table: "members", id: randomUUID(), values: { first_name: "Code", last_name: code, member_code: code },
+  });
+  const codeOf = async (lastName: string) => (await one<{ c: string }>(db, "select member_code c from members where last_name = $1", [lastName])).c;
+  await test("code membre créé hors ligne conservé s'il est dans la série du poste", async () => {
+    const r = await newMember("M-A-000001");
+    assert(r.status === "applied", JSON.stringify(r));
+    assert((await codeOf("M-A-000001")) === "M-A-000001", "code remplacé");
+  });
+  await test("code d'une autre série refusé : le serveur attribue le sien", async () => {
+    await newMember("M-B-000001");
+    assert(/^M-\d{6}$/.test(await codeOf("M-B-000001")), await codeOf("M-B-000001"));
+  });
+  await test("hors rejeu, un code fourni directement est ignoré", async () => {
+    await asCommit(db, users.receptionA, () => db.query(
+      "insert into members (organization_id, first_name, last_name, member_code) values ($1,'Direct','M-A-000002','M-A-000002')", [orgA]));
+    assert(/^M-\d{6}$/.test(await codeOf("M-A-000002")), await codeOf("M-A-000002"));
+  });
+  await test("même code envoyé deux fois : refus enregistré, pas de doublon", async () => {
+    const r = await op(users.receptionA, deviceA, "row.insert", {
+      table: "members", id: randomUUID(), values: { first_name: "Autre", last_name: "Personne", member_code: "M-A-000001" },
+    });
+    assert(r.status === "rejected", JSON.stringify(r));
+    const n = await one<{ n: string }>(db, "select count(*) n from members where member_code = 'M-A-000001'");
+    assert(n.n === "1", `${n.n} membres`);
+  });
+  await test("même identifiant de ligne envoyé deux fois : une seule fiche", async () => {
+    const id = randomUUID();
+    const a = await op(users.receptionA, deviceA, "row.insert", { table: "members", id, values: { first_name: "Une", last_name: "Fiche" } });
+    const b = await op(users.receptionA, deviceA, "row.insert", { table: "members", id, values: { first_name: "Une", last_name: "Fiche" } });
+    assert(a.result?.inserted && !b.result?.inserted && b.status === "applied", JSON.stringify([a, b]));
+    const n = await one<{ n: string }>(db, "select count(*) n from members where id = $1", [id]);
+    assert(n.n === "1", `${n.n} fiches`);
+  });
+
+  console.log("\nSynchronisation : paiements");
+  const pay = (args: Record<string, unknown>, occurredAt?: Date, user = users.receptionA, device = deviceA) =>
+    op(user, device, "record_payment", { member: alice, method: cash, request_id: randomUUID(), ...args }, occurredAt);
+  await test("paiement hors ligne : numéro du poste et heure réelle, même antidaté par l'accueil", async () => {
+    const at = hoursAgo(72);
+    const r = await pay({ amount: 5, subscription: subAlice, receipt_number: "R-A-2026-000001" }, at);
+    assert(r.status === "applied" && r.result?.receipt_number === "R-A-2026-000001", JSON.stringify(r));
+    const p = await one<{ t: Date }>(db, "select paid_at t from payments where id = $1", [r.result!.payment_id]);
+    assert(Math.abs(p.t.getTime() - at.getTime()) < 1000, p.t.toISOString());
+  });
+  await test("reçu d'une autre série refusé : le serveur attribue le sien", async () => {
+    const r = await pay({ amount: 1, subscription: subAlice, receipt_number: "R-B-2026-000009" });
+    assert(/^R-\d{4}-\d{6}$/.test(r.result!.receipt_number!), JSON.stringify(r));
+  });
+  await test("même paiement rejoué avec un nouvel op_id : un seul encaissement", async () => {
+    const request = randomUUID();
+    const a = await pay({ amount: 1, subscription: subAlice, request_id: request });
+    const b = await pay({ amount: 1, subscription: subAlice, request_id: request });
+    assert(a.result?.payment_id === b.result?.payment_id, JSON.stringify([a, b]));
+  });
+  await test("trop-perçu au rejeu : refus enregistré, solde intact", async () => {
+    const before = await one<{ b: string }>(db, "select balance b from subscription_overview where id = $1", [subAlice]);
+    const r = await pay({ amount: 9999, subscription: subAlice });
+    assert(r.status === "rejected" && /dépasse le reste à payer/.test(r.error_message!), JSON.stringify(r));
+    const after = await one<{ b: string }>(db, "select balance b from subscription_overview where id = $1", [subAlice]);
+    assert(before.b === after.b, `${before.b} -> ${after.b}`);
+    const row = await one<{ status: string }>(db, "select status from sync_ops where error_message like '%dépasse%' order by created_at desc limit 1");
+    assert(row.status === "rejected", "refus non conservé pour revue");
+  });
+  await test("paiement trop ancien ou daté dans le futur : refus enregistré", async () => {
+    const old = await pay({ amount: 1, subscription: subAlice }, hoursAgo(24 * 40));
+    assert(old.status === "rejected" && /trop ancienne/.test(old.error_message!), JSON.stringify(old));
+    const future = await pay({ amount: 1, subscription: subAlice }, hoursAgo(-2));
+    assert(future.status === "rejected" && /horloge/.test(future.error_message!), JSON.stringify(future));
+  });
+  await test("abonnement et paiement créés hors ligne s'enchaînent via leur request_id", async () => {
+    const carl = (await asCommit(db, users.receptionA, () => one<{ id: string }>(db,
+      "insert into members (organization_id, first_name, last_name) values ($1,'Carl','Enchaine') returning id", [orgA]))).id;
+    const subRequest = randomUUID();
+    const s = await op(users.receptionA, deviceA, "create_subscription", { member: carl, plan: monthly, request_id: subRequest });
+    assert(s.status === "applied", JSON.stringify(s));
+    const payRequest = randomUUID();
+    const p = await pay({ member: carl, amount: 10, subscription_request: subRequest, request_id: payRequest });
+    assert(p.status === "applied", JSON.stringify(p));
+    const refund = await op(users.ownerA, deviceB, "refund_payment",
+      { payment_request: payRequest, type: "refund", amount: 2, reason: "Erreur de saisie", request_id: randomUUID() });
+    assert(refund.status === "applied", JSON.stringify(refund));
+    const o = await one<{ amount_paid: string }>(db, "select amount_paid from subscription_overview where id = $1", [s.result!.subscription_id]);
+    assert(o.amount_paid === "8.000", o.amount_paid);
+  });
+  await test("deux postes vendent le même abonnement : le second est refusé, pas de doublon", async () => {
+    const eve = (await asCommit(db, users.receptionA, () => one<{ id: string }>(db,
+      "insert into members (organization_id, first_name, last_name) values ($1,'Eve','Double') returning id", [orgA]))).id;
+    const today = (await one<{ d: string }>(db, "select current_date::text d")).d;
+    const a = await op(users.receptionA, deviceA, "create_subscription", { member: eve, plan: monthly, request_id: randomUUID(), start: today });
+    const b = await op(users.ownerA, deviceB, "create_subscription", { member: eve, plan: monthly, request_id: randomUUID(), start: today });
+    assert(a.status === "applied" && b.status === "rejected", JSON.stringify([a, b]));
+    assert(/déjà une adhésion/.test(b.error_message!), b.error_message!);
+  });
+  await test("l'accueil ne peut pas rembourser, même par rejeu", async () => {
+    const r = await op(users.receptionA, deviceA, "refund_payment",
+      { payment: pay1, type: "refund", amount: 1, reason: "Essai", request_id: randomUUID() });
+    assert(r.status === "rejected" && /non autorisée/.test(r.error_message!), JSON.stringify(r));
+  });
+
+  console.log("\nSynchronisation : conflits, jamais d'écrasement");
+  const memberRow = () => one<{ phone: string | null; email: string | null; first_name: string }>(db,
+    "select phone, email, first_name from members where id = $1", [bob]);
+  await test("champs différents modifiés de chaque côté : les deux modifications sont gardées", async () => {
+    const base = await memberRow();
+    await asCommit(db, users.ownerA, () => db.query("update members set first_name = 'Web' where id = $1", [bob]));
+    const r = await op(users.receptionA, deviceA, "row.update", {
+      table: "members", id: bob, base: { email: base.email }, changes: { email: "bob@hors-ligne.tn" },
+    });
+    assert(r.status === "applied", JSON.stringify(r));
+    const m = await memberRow();
+    assert(m.first_name === "Web" && m.email === "bob@hors-ligne.tn", JSON.stringify(m));
+  });
+  await test("même champ modifié des deux côtés : la valeur du serveur reste, le conflit part en revue", async () => {
+    const base = await memberRow();
+    await asCommit(db, users.ownerA, () => db.query("update members set phone = '11 111 111' where id = $1", [bob]));
+    const r = await op(users.receptionA, deviceA, "row.update", {
+      table: "members", id: bob, base: { phone: base.phone, first_name: base.first_name }, changes: { phone: "22 222 222", first_name: "HorsLigne" },
+    });
+    assert(r.status === "conflict", JSON.stringify(r));
+    assert(r.conflicts?.length === 1 && r.conflicts[0]!.field === "phone" && r.conflicts[0]!.server === "11 111 111", JSON.stringify(r.conflicts));
+    const m = await memberRow();
+    assert(m.phone === "11 111 111" && m.first_name === "HorsLigne", JSON.stringify(m));
+  });
+  await test("une ancienne modification hors ligne n'écrase jamais une plus récente, quelle que soit l'horloge", async () => {
+    const r = await op(users.receptionA, deviceA, "row.update", {
+      table: "members", id: bob, base: { phone: "ancienne valeur" }, changes: { phone: "33 333 333" },
+    }, hoursAgo(1));
+    assert(r.status === "conflict", JSON.stringify(r));
+    assert((await memberRow()).phone === "11 111 111", "valeur écrasée");
+  });
+  await test("modification déjà faite ailleurs à l'identique : aucun conflit", async () => {
+    const r = await op(users.receptionA, deviceA, "row.update", {
+      table: "members", id: bob, base: { phone: "ancienne valeur" }, changes: { phone: "11 111 111" },
+    });
+    assert(r.status === "applied", JSON.stringify(r));
+  });
+  await test("suppression d'une ligne modifiée entre-temps : conservée, conflit signalé", async () => {
+    const id = (await asCommit(db, users.ownerA, () => one<{ id: string }>(db,
+      "insert into workout_programs (organization_id, name) values ($1,'A garder') returning id", [orgA]))).id;
+    await asCommit(db, users.ownerA, () => db.query("update workout_programs set name = 'Modifié' where id = $1", [id]));
+    const r = await op(users.ownerA, deviceB, "row.delete", { table: "workout_programs", id, base_version: 1 });
+    assert(r.status === "conflict", JSON.stringify(r));
+    const ok = await op(users.ownerA, deviceB, "row.delete", { table: "workout_programs", id, base_version: 2 });
+    assert(ok.status === "applied" && ok.result?.deleted, JSON.stringify(ok));
+  });
+  await test("résolution d'un conflit : réservée à son auteur ou au propriétaire", async () => {
+    const opId = randomUUID();
+    await op(users.receptionA, deviceA, "row.update", {
+      table: "members", id: bob, base: { phone: "x" }, changes: { phone: "y" },
+    }, undefined, opId);
+    await expectError(as(db, users.coachA, () => db.query("select sync_resolve_op($1,$2)", [orgA, opId])), /non autorisée/);
+    await asCommit(db, users.ownerA, () => db.query("select sync_resolve_op($1,$2)", [orgA, opId]));
+    const r = await one<{ resolved_at: Date | null }>(db, "select resolved_at from sync_ops where op_id = $1", [opId]);
+    assert(r.resolved_at !== null, "non résolu");
+  });
+
+  console.log("\nSynchronisation : rôles et permissions conservés");
+  await test("un coach ne peut pas modifier une fiche par rejeu", async () => {
+    const r = await op(users.coachA, deviceA, "row.update", { table: "members", id: alice, base: { first_name: "Alice" }, changes: { first_name: "x" } });
+    assert(r.status === "rejected", JSON.stringify(r));
+  });
+  await test("tables et champs sensibles fermés au rejeu", async () => {
+    const staff = await op(users.ownerA, deviceB, "row.update", { table: "staff", id: randomUUID(), base: {}, changes: { role: "owner" } });
+    assert(staff.status === "rejected" && /non autorisée/.test(staff.error_message!), JSON.stringify(staff));
+    const pays = await op(users.ownerA, deviceB, "row.update", { table: "payments", id: pay1, base: { amount: 30 }, changes: { amount: 1 } });
+    assert(pays.status === "rejected", JSON.stringify(pays));
+    const code = await op(users.ownerA, deviceB, "row.update", { table: "members", id: alice, base: { member_code: "M-000001" }, changes: { member_code: "Z" } });
+    assert(code.status === "rejected", JSON.stringify(code));
+    const org = await op(users.ownerA, deviceB, "row.insert", { table: "coaches", id: randomUUID(), values: { full_name: "X", organization_id: orgB } });
+    assert(org.status === "rejected", JSON.stringify(org));
+  });
+  await test("un nom de champ malveillant ne s'exécute pas", async () => {
+    const r = await op(users.ownerA, deviceB, "row.update", {
+      table: "members", id: alice, base: { "notes = 'x'; drop table members; --": null }, changes: { "notes = 'x'; drop table members; --": 1 },
+    });
+    assert(r.status === "rejected", JSON.stringify(r));
+    assert((await one<{ n: string }>(db, "select count(*) n from members")).n !== "0", "table touchée");
+  });
+  await test("un nom de table malveillant est refusé", async () => {
+    const r = await op(users.ownerA, deviceB, "row.delete", { table: "members; drop table members", id: alice, base_version: 99 });
+    assert(r.status === "rejected", JSON.stringify(r));
+  });
+  await test("une opération d'une autre salle reste invisible", async () => {
+    const n = await as(db, users.ownerB, () => one<{ n: string }>(db, "select count(*) n from sync_ops"));
+    assert(n.n === "0", `${n.n} opérations visibles`);
+  });
+  await test("le coach ne voit pas les opérations des autres, le propriétaire si", async () => {
+    const coach = await as(db, users.coachA, () => one<{ n: string }>(db, "select count(*) n from sync_ops where user_id <> $1", [users.coachA]));
+    assert(coach.n === "0", `${coach.n} opérations visibles`);
+    const owner = await as(db, users.ownerA, () => one<{ n: string }>(db, "select count(*) n from sync_ops where user_id <> $1", [users.ownerA]));
+    assert(Number(owner.n) > 0, "le propriétaire ne voit rien");
+  });
+  await test("employé désactivé : son opération est refusée à la synchronisation et enregistrée", async () => {
+    await db.query("update staff set is_active = false where user_id = $1", [users.coachA]);
+    const opId = randomUUID();
+    const r = await op(users.coachA, deviceA, "check_in", { member: alice, method: "qr" }, hoursAgo(1), opId);
+    await db.query("update staff set is_active = true where user_id = $1", [users.coachA]);
+    assert(r.status === "rejected" && /désactivé/.test(r.error_message!), JSON.stringify(r));
+  });
+  await test("poste révoqué : plus aucune opération acceptée, ni nouvel enregistrement", async () => {
+    await expectError(as(db, users.receptionA, () => db.query("select sync_revoke_device($1,$2)", [orgA, deviceB])), /non autorisée/);
+    await asCommit(db, users.ownerA, () => db.query("select sync_revoke_device($1,$2)", [orgA, deviceB]));
+    await expectError(op(users.ownerA, deviceB, "check_in", { member: alice, method: "qr" }), /révoqué/);
+    await expectError(as(db, users.ownerA, () => db.query("select sync_register_device($1,$2)", [orgA, deviceB])), /révoqué/);
+    const a = await one<{ n: string }>(db, "select count(*) n from audit_logs where action = 'sync_devices.update'");
+    assert(a.n === "1", "révocation non tracée");
+  });
+
   await db.end();
   console.log(`\n${passed} réussis, ${failures.length} échoués`);
   if (failures.length) {
