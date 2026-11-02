@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { Bell, Building2, Check, Dumbbell, LogOut, Menu, Monitor, Moon, Sun } from "lucide-react";
+import { Bell, Building2, Check, LogOut, Menu, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import { InitialsAvatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import type { StaffRole } from "@/lib/permissions";
+import { CastleLogo, CastleWordmark } from "./castle-logo";
 import { visibleSections } from "./nav-config";
 
 interface ShellProps {
@@ -41,15 +42,16 @@ export function AppShell(props: ShellProps) {
 
   return (
     <div className="flex min-h-screen">
-      <aside className="no-print sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r bg-background lg:flex">
-        <Brand orgName={props.orgName} />
+      {/* La navigation reste noire dans les deux thèmes (identité Castle). */}
+      <aside className="dark castle-rail no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r text-foreground [color-scheme:dark] lg:flex">
+        <Brand />
         <NavLinks sections={sections} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent className="left-0 right-auto w-72 border-l-0 border-r sm:max-w-xs">
+        <SheetContent className="dark castle-rail left-0 right-auto w-72 border-l-0 border-r text-foreground [color-scheme:dark] sm:max-w-xs">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <Brand orgName={props.orgName} />
+          <Brand />
           <NavLinks sections={sections} onNavigate={() => setMobileOpen(false)} />
         </SheetContent>
       </Sheet>
@@ -83,16 +85,15 @@ export function AppShell(props: ShellProps) {
   );
 }
 
-function Brand({ orgName }: { orgName: string }) {
+function Brand() {
   return (
-    <div className="flex h-14 items-center gap-2.5 px-4">
-      <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-950 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.15),0_1px_2px_rgb(0_0_0/0.2)] dark:from-zinc-200 dark:to-zinc-400 dark:text-zinc-950">
-        <Dumbbell className="size-3.5" strokeWidth={2} aria-hidden />
-      </span>
+    <div className="relative mb-3 flex h-20 items-center gap-3 px-4">
+      <CastleLogo className="h-12 drop-shadow-[0_4px_16px_rgb(232_38_42/0.35)]" />
       <div className="min-w-0 leading-tight">
-        <p className="text-[13px] font-semibold tracking-[-0.01em]">Gym CRM</p>
-        <p className="truncate text-[11px] text-muted-foreground">{orgName}</p>
+        <CastleWordmark className="block text-[15px]" />
+        <p className="mt-1 truncate text-[10.5px] text-muted-foreground">{t.app.tagline}</p>
       </div>
+      <span aria-hidden className="hairline-brand absolute inset-x-4 bottom-0" />
     </div>
   );
 }
@@ -114,14 +115,14 @@ function NavLinks({ sections, onNavigate }: { sections: ReturnType<typeof visibl
                     onClick={onNavigate}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "group flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-all duration-300 ease-out",
+                      "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-all duration-300 ease-out",
                       active
-                        ? "edge-highlight bg-card font-medium text-foreground shadow-card ring-1 ring-border"
+                        ? "bg-gradient-to-r from-brand/20 to-brand/[0.03] font-medium text-foreground ring-1 ring-inset ring-brand/25 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brand"
                         : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
                     )}
                   >
                     <Icon
-                      className={cn("size-4 transition-colors duration-300 ease-out", active ? "text-foreground" : "text-subtle-foreground group-hover:text-foreground")}
+                      className={cn("size-4 transition-colors duration-300 ease-out", active ? "text-brand" : "text-subtle-foreground group-hover:text-foreground")}
                       strokeWidth={1.75}
                       aria-hidden
                     />

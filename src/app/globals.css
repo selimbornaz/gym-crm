@@ -4,97 +4,99 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
- * Design system « Premium Minimalist »
+ * Design system « Castle » : noir profond et rouge du logo
  * -----------------------------------------------------------------------------
- *  Light  : fond #fafafa · surfaces #ffffff · bordures #e4e4e7
- *  Dark   : fond #09090b · surfaces #18181b · bordures #27272a
- *  Texte  : principal zinc-900 / zinc-50 · secondaire zinc-500 / zinc-400
- *  Accent : indigo (focus, surbrillances) — les statuts gardent leurs teintes
- *           réservées, toujours en version translucide (bg-*-500/10).
+ *  Dark (défaut) : fond #0a0808 · surfaces #141111 · bordures #2a2323
+ *  Light         : fond #f8f6f5 · surfaces #ffffff · bordures #e7e1df
+ *  Texte  : ivoire chaud / noir chaud, jamais de blanc ni de gris froids
+ *  Accent : rouge du logo #e8262a (actions, focus, navigation active) ; les
+ *           statuts gardent leurs teintes, toujours translucides (bg-*-500/10).
  * ========================================================================== */
 :root {
   --radius: 0.75rem;
 
-  --background: #fafafa;
-  --foreground: #18181b;          /* zinc-900 */
+  --background: #f8f6f5;
+  --foreground: #171212;
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: #171212;
   --popover: #ffffff;
-  --popover-foreground: #18181b;
-  --primary: #18181b;
-  --primary-foreground: #fafafa;
-  --secondary: #f4f4f5;           /* zinc-100 */
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;    /* zinc-500 */
-  --subtle-foreground: #a1a1aa;   /* zinc-400 : métadonnées tertiaires */
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
-  --destructive: #dc2626;
-  --border: #e4e4e7;              /* zinc-200 */
-  --border-strong: #d4d4d8;       /* zinc-300 : survol */
-  --input: #e4e4e7;
-  --ring: #6366f1;                /* indigo-500 */
-  --brand: #6366f1;
+  --popover-foreground: #171212;
+  --primary: #d81f26;
+  --primary-foreground: #ffffff;
+  --secondary: #f1eded;
+  --secondary-foreground: #171212;
+  --muted: #f1eded;
+  --muted-foreground: #6f6663;
+  --subtle-foreground: #857b78;   /* métadonnées tertiaires */
+  --accent: #f1eded;
+  --accent-foreground: #171212;
+  --destructive: #c81e1e;
+  --border: #e7e1df;
+  --border-strong: #d6cecb;       /* survol */
+  --input: #e7e1df;
+  --ring: #d81f26;
+  --brand: #d81f26;
 
   /* Statuts (texte lisible sur fond translucide) */
-  --success: #059669;             /* emerald-600 */
-  --warning: #d97706;             /* amber-600 */
-  --danger: #dc2626;              /* red-600 */
-  --info: #4f46e5;                /* indigo-600 */
+  --success: #047857;
+  --warning: #b45309;
+  --danger: #c81e1e;
+  --info: #2f6299;
 
   /* Graphiques (palette validée daltonisme, ordre fixe) */
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-grid: #f0f0f2;
+  --chart-1: #d81f26;
+  --chart-2: #2f74b8;
+  --chart-3: #b07d12;
+  --chart-grid: #f0ecea;
 
   /* Ombres douces et diffuses (cartes « bento ») */
-  --shadow-card: 0 1px 2px rgb(9 9 11 / 0.04), 0 1px 1px rgb(9 9 11 / 0.02);
-  --shadow-card-hover: 0 1px 2px rgb(9 9 11 / 0.04), 0 12px 32px -12px rgb(9 9 11 / 0.14);
-  --shadow-float: 0 16px 48px -16px rgb(9 9 11 / 0.22), 0 2px 6px rgb(9 9 11 / 0.06);
-  --glow: rgb(99 102 241 / 0.10);
+  --shadow-card: 0 1px 2px rgb(23 18 18 / 0.05), 0 1px 1px rgb(23 18 18 / 0.02);
+  --shadow-card-hover: 0 1px 2px rgb(23 18 18 / 0.05), 0 14px 34px -12px rgb(216 31 38 / 0.16);
+  --shadow-float: 0 16px 48px -16px rgb(23 18 18 / 0.24), 0 2px 6px rgb(23 18 18 / 0.06);
+  --glow: rgb(216 31 38 / 0.08);
+  --ambient: rgb(216 31 38 / 0.05);
   --highlight: rgb(255 255 255 / 0);
 }
 
 .dark {
-  --background: #09090b;          /* zinc-950 */
-  --foreground: #fafafa;          /* zinc-50 */
-  --card: #18181b;                /* zinc-900 */
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #18181b;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;    /* zinc-400 */
-  --subtle-foreground: #71717a;   /* zinc-500 */
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --border: #27272a;              /* zinc-800 */
-  --border-strong: #3f3f46;       /* zinc-700 */
-  --input: #27272a;
-  --ring: #818cf8;                /* indigo-400 */
-  --brand: #818cf8;
+  --background: #0a0808;
+  --foreground: #f7f3f1;          /* ivoire */
+  --card: #141111;
+  --card-foreground: #f7f3f1;
+  --popover: #181414;
+  --popover-foreground: #f7f3f1;
+  --primary: #e8262a;             /* rouge du logo */
+  --primary-foreground: #ffffff;
+  --secondary: #211b1b;
+  --secondary-foreground: #f7f3f1;
+  --muted: #211b1b;
+  --muted-foreground: #a89f9c;
+  --subtle-foreground: #8a7f7c;
+  --accent: #211b1b;
+  --accent-foreground: #f7f3f1;
+  --destructive: #ff7b72;
+  --border: #2a2323;
+  --border-strong: #3d3232;
+  --input: #2a2323;
+  --ring: #ff4a4d;
+  --brand: #ff4a4d;               /* rouge éclairci : lisible en texte sur noir */
 
-  --success: #34d399;             /* emerald-400 */
-  --warning: #fbbf24;             /* amber-400 */
-  --danger: #f87171;              /* red-400 */
-  --info: #818cf8;                /* indigo-400 */
+  --success: #34d399;
+  --warning: #e6b450;
+  --danger: #ff7b72;
+  --info: #8fb3de;
 
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-grid: #232326;
+  --chart-1: #e8262a;
+  --chart-2: #3f8bd4;
+  --chart-3: #b07d12;
+  --chart-grid: #241e1e;
 
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 16px 40px -16px rgb(0 0 0 / 0.7);
-  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.04);
-  --glow: rgb(129 140 248 / 0.12);
-  --highlight: rgb(255 255 255 / 0.04);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 18px 44px -18px rgb(232 38 42 / 0.28);
+  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(255 255 255 / 0.04);
+  --glow: rgb(232 38 42 / 0.14);
+  --ambient: rgb(232 38 42 / 0.09);
+  --highlight: rgb(255 255 255 / 0.05);
 }
 
 @theme inline {
@@ -145,6 +147,12 @@
   }
   html {
     color-scheme: light;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+  /* Les barres de défilement n'héritent pas des variables du thème de la zone. */
+  .castle-rail nav {
+    scrollbar-color: #3d3232 transparent;
   }
   html.dark {
     color-scheme: dark;
@@ -153,12 +161,16 @@
     @apply bg-background font-sans text-[14px] leading-[1.5] tracking-[-0.006em] text-foreground antialiased;
     font-feature-settings: "cv11", "ss01", "ss03";
     text-rendering: optimizeLegibility;
+    /* Lueur rouge très discrète en haut de page. */
+    background-image: radial-gradient(70rem 26rem at 75% -8rem, var(--ambient), transparent 70%);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
   }
   h1, h2, h3 {
     @apply tracking-[-0.02em];
   }
   ::selection {
-    background: rgb(99 102 241 / 0.22);
+    background: rgb(232 38 42 / 0.3);
   }
   input[type="checkbox"],
   input[type="radio"] {
@@ -177,6 +189,22 @@
   /* Libellé « eyebrow » : petites capitales espacées pour les en-têtes de section. */
   .text-eyebrow {
     @apply text-[11px] font-medium uppercase leading-none tracking-[0.08em] text-subtle-foreground;
+  }
+  /* Fond noir de la navigation et du panneau de connexion, réchauffé en haut. */
+  .castle-rail {
+    background: linear-gradient(180deg, #170d0d 0%, #0a0707 38%, #060404 100%);
+  }
+  /* Filet rouge qui s'estompe aux extrémités. */
+  .hairline-brand {
+    display: block;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(232 38 42 / 0.75), transparent);
+  }
+  /* Trame d'hexagones reprenant la géométrie du logo, estompée vers les bords. */
+  .hex-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.05'/%3E%3C/svg%3E");
+    -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent);
+    mask-image: radial-gradient(closest-side, #000 35%, transparent);
   }
   /* Chiffres alignés et resserrés pour les KPI. */
   .text-figure {
@@ -201,7 +229,7 @@
     inset: -1px;
     padding: 1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgb(99 102 241 / 0.7), rgb(99 102 241 / 0) 45%, rgb(16 185 129 / 0.45));
+    background: linear-gradient(135deg, rgb(232 38 42 / 0.8), rgb(232 38 42 / 0) 45%, rgb(232 38 42 / 0.35));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;

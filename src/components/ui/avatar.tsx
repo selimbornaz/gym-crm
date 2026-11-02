@@ -2,12 +2,12 @@ import { cn } from "@/lib/utils";
 
 /** Teintes douces et stables par personne (dérivées du nom), jamais saturées. */
 const TINTS = [
-  "bg-indigo-500/12 text-indigo-700 dark:text-indigo-300",
-  "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+  "bg-red-500/14 text-red-700 dark:text-red-300",
+  "bg-stone-500/16 text-stone-700 dark:text-stone-300",
   "bg-amber-500/14 text-amber-700 dark:text-amber-300",
-  "bg-sky-500/12 text-sky-700 dark:text-sky-300",
-  "bg-rose-500/12 text-rose-700 dark:text-rose-300",
-  "bg-violet-500/12 text-violet-700 dark:text-violet-300",
+  "bg-rose-500/14 text-rose-700 dark:text-rose-300",
+  "bg-zinc-500/16 text-zinc-700 dark:text-zinc-300",
+  "bg-orange-500/14 text-orange-700 dark:text-orange-300",
 ];
 
 function tintFor(name: string) {

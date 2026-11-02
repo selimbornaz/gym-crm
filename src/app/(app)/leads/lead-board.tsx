@@ -37,8 +37,8 @@ const STALE_MS = 24 * 3_600_000;
 /** Pastille de colonne : teinte discrète par étape (la couleur double un libellé). */
 const STAGE_DOT: Record<Status, string> = {
   to_contact: "bg-zinc-400",
-  trial_scheduled: "bg-indigo-500",
-  trial_done: "bg-sky-500",
+  trial_scheduled: "bg-info",
+  trial_done: "bg-amber-500",
   won: "bg-emerald-500",
   lost: "bg-rose-500/70",
 };
@@ -272,14 +272,14 @@ function Column({ status, leads, onOpen, dragging }: { status: Status; leads: Le
         className={cn(
           "mx-2 mb-2 flex min-h-56 flex-1 flex-col gap-2 rounded-xl p-1.5 transition-all duration-300 ease-out",
           dragging && "bg-secondary/30",
-          isOver && "bg-indigo-500/[0.06] ring-1 ring-inset ring-indigo-500/30",
+          isOver && "bg-brand/[0.06] ring-1 ring-inset ring-brand/30",
         )}
       >
         {leads.map((l) => (
           <LeadCard key={l.id} lead={l} onOpen={onOpen} />
         ))}
         {leads.length === 0 && (
-          <p className={cn("flex flex-1 items-center justify-center rounded-lg border border-dashed py-8 text-[11px] text-subtle-foreground transition-colors duration-300 ease-out", isOver && "border-indigo-500/40 text-indigo-600 dark:text-indigo-300")}>
+          <p className={cn("flex flex-1 items-center justify-center rounded-lg border border-dashed py-8 text-[11px] text-subtle-foreground transition-colors duration-300 ease-out", isOver && "border-brand/40 text-brand")}>
             Déposez un prospect ici
           </p>
         )}
@@ -331,7 +331,7 @@ function LeadCard({ lead, onOpen, overlay }: { lead: LeadView; onOpen?: (id: str
         </div>
         {lead.status === "trial_scheduled" && lead.trial_at && (
           <div className="flex items-center gap-2">
-            <CalendarClock className="size-3.5 text-indigo-500" strokeWidth={1.5} aria-label="Essai" />
+            <CalendarClock className="size-3.5 text-brand" strokeWidth={1.5} aria-label="Essai" />
             <span className="truncate">Essai {formatDateTime(lead.trial_at)}</span>
           </div>
         )}

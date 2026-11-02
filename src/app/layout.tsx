@@ -9,15 +9,15 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans", dis
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: { default: "Gym CRM", template: "%s · Gym CRM" },
+  title: { default: "Castle", template: "%s · Castle" },
   description: "Gestion des membres, abonnements, paiements et présences pour salles de sport.",
   robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
-    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f6f5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0808" },
   ],
 };
 

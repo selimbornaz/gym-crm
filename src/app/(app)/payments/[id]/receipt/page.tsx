@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CastleLogo } from "@/components/app/castle-logo";
 import { PrintButton } from "@/components/app/print-button";
 import { requirePagePermission } from "@/lib/auth/context";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
@@ -34,6 +35,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
       <article className="w-full max-w-md rounded-xl border bg-white p-8 text-sm text-black shadow-sm print:border-0 print:shadow-none">
         <header className="border-b pb-4 text-center">
+          <CastleLogo className="mx-auto mb-3 h-16" />
           <p className="text-lg font-semibold">{org?.name}</p>
           {org?.legal_name && <p>{org.legal_name}</p>}
           {org?.address && <p className="text-zinc-600">{org.address}</p>}

@@ -4,7 +4,7 @@
  * et l'enregistrer dans `src/i18n/index.ts` ; le layout gère déjà `dir="rtl"`.
  */
 export const fr = {
-  app: { name: "Gym CRM", tagline: "Gestion de salle de sport" },
+  app: { name: "Castle", tagline: "Gestion de salle de sport" },
 
   nav: {
     dashboard: "Tableau de bord",

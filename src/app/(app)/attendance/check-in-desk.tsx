@@ -156,7 +156,7 @@ export function CheckInDesk({ preselected }: { preselected?: CheckInCandidate | 
 const TONES = {
   success: { ring: "ring-emerald-500/25", band: "from-emerald-500/[0.10]", icon: "bg-emerald-500/10 text-emerald-600 ring-emerald-500/25 dark:text-emerald-400", text: "text-emerald-700 dark:text-emerald-400" },
   warning: { ring: "ring-amber-500/25", band: "from-amber-500/[0.10]", icon: "bg-amber-500/10 text-amber-600 ring-amber-500/25 dark:text-amber-400", text: "text-amber-700 dark:text-amber-400" },
-  info: { ring: "ring-indigo-500/25", band: "from-indigo-500/[0.10]", icon: "bg-indigo-500/10 text-indigo-600 ring-indigo-500/25 dark:text-indigo-300", text: "text-indigo-700 dark:text-indigo-300" },
+  info: { ring: "ring-info/25", band: "from-info/[0.10]", icon: "bg-info/10 text-info ring-info/25", text: "text-info" },
   danger: { ring: "ring-red-500/25", band: "from-red-500/[0.10]", icon: "bg-red-500/10 text-red-600 ring-red-500/25 dark:text-red-400", text: "text-red-700 dark:text-red-400" },
 } as const;
 

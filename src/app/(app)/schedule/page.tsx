@@ -95,14 +95,14 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
             const isToday = day === today;
             const past = day < today;
             return (
-              <section key={day} aria-label={`${t.weekdays[i]} ${formatDate(day)}`} className={cn("flex min-h-[420px] flex-col", isToday && "bg-indigo-500/[0.03]")}>
+              <section key={day} aria-label={`${t.weekdays[i]} ${formatDate(day)}`} className={cn("flex min-h-[420px] flex-col", isToday && "bg-brand/[0.04]")}>
                 <header className="flex items-baseline gap-2 border-b px-3 py-3">
-                  <span className={cn("text-eyebrow", isToday && "text-indigo-600 dark:text-indigo-300")}>{(t.weekdays[i] ?? "").slice(0, 3)}.</span>
+                  <span className={cn("text-eyebrow", isToday && "text-brand")}>{(t.weekdays[i] ?? "").slice(0, 3)}.</span>
                   <span
                     className={cn(
                       "text-figure text-[18px] leading-none",
                       past && "text-subtle-foreground",
-                      isToday && "rounded-md bg-indigo-500 px-1.5 py-0.5 text-[15px] text-white dark:bg-indigo-400 dark:text-zinc-950",
+                      isToday && "rounded-md bg-primary px-1.5 py-0.5 text-[15px] text-primary-foreground",
                     )}
                   >
                     {Number(day.slice(8, 10))}

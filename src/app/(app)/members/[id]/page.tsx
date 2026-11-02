@@ -97,7 +97,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
 
       {/* En-tête héros ------------------------------------------------------------ */}
       <Card className="overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-indigo-500/[0.06] to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-brand/[0.10] to-transparent" />
         <div className="relative flex flex-col gap-5 p-6 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-center gap-5">
             <MemberPhoto memberId={member.id} orgId={ctx.org.id} photoUrl={photoUrl} canEdit={ctx.can("members.write")} name={member.full_name} size="size-16" />
