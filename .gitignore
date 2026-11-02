@@ -1,5 +1,6 @@
 node_modules
 .next
+.next-desktop
 .env
 .env.local
 .env.*.local
@@ -13,3 +14,4 @@ backups/
 
 # Application de bureau : fichiers générés
 desktop/dist/
+desktop/server/

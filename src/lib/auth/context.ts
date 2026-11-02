@@ -8,7 +8,7 @@ import type { Permission, StaffRole } from "@/lib/permissions";
 export const ORG_COOKIE = "gym_org";
 
 /** Salle de démonstration conservée en base mais masquée dans l'application. */
-const HIDDEN_ORG_SLUGS = ["salle-demo"];
+export const HIDDEN_ORG_SLUGS = ["salle-demo"];
 
 export interface Organization {
   id: string;

@@ -1,7 +1,7 @@
 {
   "name": "castle-crm-desktop",
   "productName": "Castle CRM",
-  "version": "0.1.0",
+  "version": "0.2.3",
   "private": true,
   "description": "Application de bureau de Castle : le même CRM que la version en ligne.",
   "author": "Castle",
@@ -9,7 +9,9 @@
   "scripts": {
     "start": "electron .",
     "test": "node test-shell.mjs",
-    "dist": "electron-builder --win nsis --x64"
+    "test:offline": "node test-offline.mjs",
+    "build:server": "node build-server.mjs",
+    "dist": "node build-server.mjs && electron-builder --win nsis --x64"
   },
   "devDependencies": {
     "electron": "45.2.1",
@@ -22,6 +24,15 @@
     "npmRebuild": false,
     "directories": { "output": "dist", "buildResources": "build" },
     "files": ["main.cjs", "offline.html"],
+    "afterPack": "./after-pack.cjs",
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "win": { "target": ["nsis"], "icon": "build/icon.png" },
     "nsis": {
       "oneClick": false,

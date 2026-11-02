@@ -190,6 +190,18 @@
   .text-eyebrow {
     @apply text-[11px] font-medium uppercase leading-none tracking-[0.08em] text-subtle-foreground;
   }
+  /* Logo de connexion : apparition douce, puis lente respiration lumineuse. */
+  .logo-breathe {
+    animation:
+      castle-logo-in 900ms var(--ease-out-soft) both,
+      castle-logo-breathe 6s ease-in-out 900ms infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo-breathe {
+      animation: none;
+      filter: drop-shadow(0 12px 48px rgb(232 38 42 / 0.35));
+    }
+  }
   /* Fond noir de la navigation et du panneau de connexion, réchauffé en haut. */
   .castle-rail {
     background: linear-gradient(180deg, #170d0d 0%, #0a0707 38%, #060404 100%);
@@ -241,6 +253,29 @@
   .gradient-border:focus-visible::before,
   .gradient-border[data-active="true"]::before {
     opacity: 1;
+  }
+}
+
+@keyframes castle-logo-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+    filter: drop-shadow(0 12px 24px rgb(232 38 42 / 0));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: drop-shadow(0 12px 48px rgb(232 38 42 / 0.3));
+  }
+}
+@keyframes castle-logo-breathe {
+  0%, 100% {
+    transform: translateY(0);
+    filter: drop-shadow(0 12px 48px rgb(232 38 42 / 0.3));
+  }
+  50% {
+    transform: translateY(-6px);
+    filter: drop-shadow(0 18px 64px rgb(232 38 42 / 0.55));
   }
 }
 

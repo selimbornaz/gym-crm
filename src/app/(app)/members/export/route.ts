@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
   if (error) return new NextResponse("Export impossible", { status: 500 });
   const rows = (data ?? []) as Partial<MemberRow>[];
 
-  await ctx.supabase.rpc("log_member_export", { p_org: ctx.org.id, p_count: rows.length, p_filters: { q, status } });
+  // Pas de trace, pas d'export : données personnelles (cas du mode hors ligne).
+  const { error: logError } = await ctx.supabase.rpc("log_member_export", { p_org: ctx.org.id, p_count: rows.length, p_filters: { q, status } });
+  if (logError) return new NextResponse(logError.message, { status: 503 });
   const header = ["N° membre", "Prénom", "Nom", "Téléphone", "Email", "Naissance", "Genre", "Inscription", "Statut", "Fin abonnement", "Coach"];
   const lines = rows.map((m) =>
     [

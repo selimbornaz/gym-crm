@@ -162,7 +162,7 @@ console.log("Fenêtre et sécurité");
     await app.evaluate("location.reload(); 1");
     await until(async () => (await app.page()).url.includes("offline.html"), "page d'attente absente");
     const text = await app.evaluate("document.body.innerText");
-    assert(text.includes("Connexion Internet requise"), text);
+    assert(text.includes("Castle redémarre"), text);
     const again = await fakeCrm(CRM_PORT);
     await until(async () => (await app.page()).url === `${CRM}/paiements`, "pas de retour automatique");
     await stopServer(again);
@@ -199,14 +199,33 @@ await test(`l'application affiche la connexion Castle de ${LIVE_HOST}`, async ()
 
 if (process.env.CASTLE_EXE) {
   console.log("\nLogiciel installé");
-  await test("démarre, ouvre le vrai site et n'a aucun accès à Node.js", async () => {
-    const app = launch({ exe: process.env.CASTLE_EXE });
+  const exe = process.env.CASTLE_EXE;
+  await test("refuse de démarrer avec une option de débogage", async () => {
+    for (const option of ["--remote-debugging-port=9499", "--inspect=9498"]) {
+      const child = spawn(exe, [option], { stdio: "ignore" });
+      const code = await Promise.race([
+        new Promise((resolve) => child.on("exit", (c) => resolve(c ?? 0))),
+        sleep(15_000).then(() => "toujours lancé"),
+      ]);
+      if (code === "toujours lancé") child.kill();
+      assert(code !== "toujours lancé", `${option} : l'application a démarré`);
+    }
+  });
+  await test("démarre seul le CRM local et affiche la connexion Castle", async () => {
+    const child = spawn(exe, [], { stdio: "ignore" });
+    const exited = new Promise((resolve) => child.on("exit", resolve));
     try {
-      await until(async () => (await app.page())?.title === "Connexion · Castle", "page de connexion absente", 40_000);
-      assert((await app.page()).url.startsWith(`https://${LIVE_HOST}/login`), (await app.page()).url);
-      assert((await app.evaluate("typeof require")) === "undefined", "Node.js accessible");
+      const body = await until(async () => {
+        const r = await fetch("http://localhost:47615/login");
+        const html = await r.text();
+        return r.status === 200 && html.includes("Connexion") ? html : null;
+      }, "CRM local absent", 90_000);
+      assert(!/service_role/.test(body), "clé présente");
+      const sync = await fetch("http://localhost:47615/api/desktop/sync", { method: "POST", redirect: "manual" });
+      assert(sync.status === 403, `synchronisation sans jeton : ${sync.status}`);
     } finally {
-      await app.stop();
+      child.kill();
+      await Promise.race([exited, sleep(5000)]);
     }
   });
 }

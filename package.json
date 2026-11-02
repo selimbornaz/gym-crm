@@ -8,6 +8,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:test": "tsx supabase/tests/run-local.ts",
+    "db:test:offline": "tsx --conditions=react-server supabase/tests/offline-local.ts",
     "bootstrap:owner": "tsx scripts/bootstrap-owner.ts",
     "reset:password": "tsx scripts/reset-password.ts"
   },

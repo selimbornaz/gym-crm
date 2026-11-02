@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <div aria-hidden className="hex-pattern absolute inset-0" />
         <div aria-hidden className="absolute left-1/2 top-1/2 size-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(232_38_42/0.22),transparent)]" />
         <div className="relative flex flex-col items-center">
-          <CastleLogo className="h-64 drop-shadow-[0_12px_48px_rgb(232_38_42/0.35)]" />
+          <CastleLogo className="logo-breathe h-64" />
           <CastleWordmark className="mt-10 pl-[0.3em] text-3xl" />
           <span aria-hidden className="hairline-brand mt-5 w-48" />
           <p className="mt-5 text-eyebrow">{t.app.tagline}</p>
@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <section className="flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center lg:hidden">
-            <CastleLogo className="h-24" />
+            <CastleLogo className="logo-breathe h-24" />
             <CastleWordmark className="mt-4 pl-[0.3em] text-lg" />
           </div>
           {children}

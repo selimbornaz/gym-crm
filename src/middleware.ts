@@ -16,8 +16,11 @@ export async function middleware(request: NextRequest) {
   if (!url || !key) {
     return new NextResponse("Configuration Supabase manquante : voir .env.example", { status: 500 });
   }
+  const desktop = process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1";
 
   const supabase = createServerClient(url, key, {
+    // Application de bureau : sans Internet, ne pas attendre le délai réseau du système.
+    ...(desktop ? { global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, signal: AbortSignal.timeout(2500) }) } } : {}),
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (toSet) => {
@@ -31,12 +34,18 @@ export async function middleware(request: NextRequest) {
   // getUser() valide le jeton auprès de Supabase (contrairement à getSession()).
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
+    || (desktop && path === "/api/desktop/sync");
+  // Bureau : sans réseau ou avec une session hors ligne, la page vérifie elle-même
+  // la session (signature contrôlée côté serveur, pas possible ici en runtime Edge).
+  const unreachable = desktop && !user
+    && (error?.name === "AuthRetryableFetchError" || request.cookies.has("castle_offline"));
 
-  if (!user && !isPublic) {
+  if (!user && !isPublic && !unreachable) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", path);

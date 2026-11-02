@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { AppShell } from "@/components/app/app-shell";
 import { ORG_COOKIE, getContext, requireContext } from "@/lib/auth/context";
 import { signOut } from "@/app/(auth)/actions";
+import { formatDateTime } from "@/lib/format";
 
 /** Change la salle active — uniquement vers une salle où l'utilisateur est employé. */
 async function switchOrganization(formData: FormData) {
@@ -23,6 +24,15 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     .eq("organization_id", ctx.org.id)
     .is("read_at", null);
 
+  let offlineNotice: string | null = null;
+  if (process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1") {
+    const session = await import("@/lib/offline/session");
+    const status = await session.offlineNotice(ctx.user.id);
+    if (status.offline) {
+      offlineNotice = `Mode hors ligne : consultation seulement${status.lastSync ? ` · données du ${formatDateTime(status.lastSync)}` : ""}`;
+    }
+  }
+
   return (
     <AppShell
       permissions={[...ctx.permissions]}
@@ -33,6 +43,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       userEmail={ctx.user.email}
       role={ctx.role}
       unread={count ?? 0}
+      offlineNotice={offlineNotice}
       signOutAction={signOut}
       switchOrgAction={switchOrganization}
     >

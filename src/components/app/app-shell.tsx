@@ -31,6 +31,7 @@ interface ShellProps {
   userEmail: string | null;
   role: StaffRole;
   unread: number;
+  offlineNotice?: string | null;
   signOutAction: () => Promise<void>;
   switchOrgAction: (formData: FormData) => Promise<void>;
   children: ReactNode;
@@ -79,6 +80,11 @@ export function AppShell(props: ShellProps) {
             <UserMenu {...props} />
           </div>
         </header>
+        {props.offlineNotice && (
+          <p role="status" className="no-print border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs font-medium text-warning md:px-6">
+            {props.offlineNotice}
+          </p>
+        )}
         <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{props.children}</main>
       </div>
     </div>

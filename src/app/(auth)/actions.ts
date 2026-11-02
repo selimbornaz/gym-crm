@@ -18,15 +18,31 @@ function safeNext(next: string | undefined): string {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 }
 
+const DESKTOP = process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1";
+
 export async function signIn(_: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = parseForm(loginSchema, formData);
   if (parsed.error) return parsed.error;
 
+  if (DESKTOP) {
+    const { isOnline } = await import("@/lib/offline/connectivity");
+    if (!(await isOnline())) {
+      const { offlineSignIn } = await import("@/lib/offline/session");
+      const message = await offlineSignIn(parsed.data.email, parsed.data.password);
+      if (message) return { error: message };
+      redirect(safeNext(parsed.data.next));
+    }
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password });
   if (error) {
     // Message volontairement générique : ne révèle pas si le compte existe.
     return { error: "Email ou mot de passe incorrect." };
+  }
+  if (DESKTOP && data.user) {
+    const { rememberOnlineLogin } = await import("@/lib/offline/session");
+    await rememberOnlineLogin(parsed.data.email, parsed.data.password, data.user.id);
   }
   redirect(safeNext(parsed.data.next));
 }
@@ -34,6 +50,10 @@ export async function signIn(_: ActionState, formData: FormData): Promise<Action
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  if (DESKTOP) {
+    const { clearOfflineSession } = await import("@/lib/offline/session");
+    await clearOfflineSession();
+  }
   redirect("/login");
 }
 
