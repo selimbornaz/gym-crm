@@ -415,6 +415,14 @@ async function main() {
       assert(Number(a.n) >= 1, "pas d'audit");
     });
   });
+  await test("modifier la salle fonctionne et est journalisé", async () => {
+    await as(db, null, async () => {
+      await db.query("update organizations set phone = '+216 70 000 000' where id = $1", [orgA]);
+      const a = await one<{ n: string }>(db,
+        "select count(*) n from audit_logs where action = 'organizations.update' and organization_id = $1", [orgA]);
+      assert(a.n === "1", "pas d'audit");
+    });
+  });
   await test("un employé désactivé perd immédiatement l'accès", async () => {
     await db.query("update staff set is_active = false where user_id = $1", [users.coachA]);
     const r = await as(db, users.coachA, () => rows(db, "select id from members"));

@@ -7,6 +7,9 @@ import type { Permission, StaffRole } from "@/lib/permissions";
 
 export const ORG_COOKIE = "gym_org";
 
+/** Salle de démonstration conservée en base mais masquée dans l'application. */
+const HIDDEN_ORG_SLUGS = ["salle-demo"];
+
 export interface Organization {
   id: string;
   name: string;
@@ -49,7 +52,7 @@ export const getContext = cache(async (): Promise<AppContext | null> => {
 
   const memberships = (staffRows ?? [])
     .map((row) => ({ role: row.role as StaffRole, org: row.organization as unknown as Organization | null }))
-    .filter((m): m is { role: StaffRole; org: Organization } => m.org !== null);
+    .filter((m): m is { role: StaffRole; org: Organization } => m.org !== null && !HIDDEN_ORG_SLUGS.includes(m.org.slug));
   if (memberships.length === 0) return null;
 
   const wanted = (await cookies()).get(ORG_COOKIE)?.value;
