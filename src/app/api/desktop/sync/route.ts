@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     if (error) throw new Error(error.message);
 
     const { forgetUser } = await import("@/lib/offline/store");
+    const { pushQueue, syncAll } = await import("@/lib/offline/push");
     const { clearOfflineSession, setOfflineSession } = await import("@/lib/offline/session");
     const orgs = (staff ?? [])
       .filter((s) => {
@@ -44,17 +45,20 @@ export async function POST(request: NextRequest) {
       })
       .map((s) => s.organization_id as string);
 
+    // D'abord l'envoi : même un compte retiré voit ses actions enregistrées et refusées
+    // côté serveur, donc tracées, plutôt que perdues.
+    const pushed = await pushQueue(client as never, user.id);
+
     // Compte sans plus aucun accès : ses données et sa connexion hors ligne sont effacées du poste.
-    if (orgs.length === 0) {
+    if (orgs.length === 0 && !pushed.error) {
       forgetUser(user.id);
       await clearOfflineSession();
       return NextResponse.json({ status: "no_access" });
     }
 
-    const { pullAll } = await import("@/lib/offline/sync");
-    const summary = await pullAll(client as never, user.id, orgs);
+    const outcome = await syncAll(client as never, user.id, orgs, pushed);
     await setOfflineSession(user.id);
-    return NextResponse.json({ status: "ok", ...summary });
+    return NextResponse.json(outcome);
   } catch (err) {
     console.error("[sync]", err instanceof Error ? err.message : err);
     return NextResponse.json({ status: "error" }, { status: 500 });

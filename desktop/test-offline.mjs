@@ -185,7 +185,7 @@ for (const [path, expected] of pages) {
 }
 
 console.log("\nÉcritures et droits");
-await test("créer un membre hors ligne : refus clair, rien de créé", async () => {
+await test("créer un membre hors ligne : fiche créée, visible, en attente d'envoi", async () => {
   await go("/members/new");
   await until(async () => (await evaluate("!!document.querySelector('input[name=first_name]')")) === true, "formulaire absent");
   await evaluate(`(() => {
@@ -193,9 +193,18 @@ await test("créer un membre hors ligne : refus clair, rien de créé", async ()
     set("first_name", "Horsligne"); set("last_name", "Essai"); set("phone", "20123456");
     document.querySelector("form button[type=submit]").click();
   })()`);
-  await until(async () => /Mode hors ligne : consultation seulement\. Cette action/.test(await text()), "refus non affiché");
+  await until(async () => /\/members\/[0-9a-f-]{36}/.test(await url()), "pas de redirection vers la fiche");
+  await until(async () => /Horsligne/.test(await text()) && /M-[A-Z]+-\d{6}/.test(await text()), "fiche ou numéro du poste absent");
+  await until(async () => /1 action en attente d'envoi/.test(await text()), "file non signalée dans le bandeau");
   await go("/members");
-  assert(!(await text()).includes("Horsligne"), "membre créé");
+  await until(async () => (await text()).includes("Horsligne"), "membre absent de la liste");
+  await go("/sync");
+  await until(async () => /En attente d'envoi \(1\)/.test(await text()), "file absente de l'écran de synchronisation");
+});
+await test("une action impossible sans Internet l'annonce clairement", async () => {
+  await go("/staff");
+  await until(async () => (await text()).includes("Olfa Patronne"), "page employés absente");
+  assert((await text()).includes(BANNER), "bandeau absent");
 });
 await test("le coach ne voit que ses membres et n'a pas accès aux paiements", async () => {
   await clearCookies();

@@ -14,8 +14,11 @@ import { Client } from "pg";
 import { LocalQuery, parseSelect, relationOf } from "@/lib/offline/query";
 import { runLocalRpc } from "@/lib/offline/rpc";
 import { pullAll, type RemoteClient } from "@/lib/offline/sync";
+import { computeEndDate } from "@/lib/offline/writes";
+import { pushQueue, registerDevice, syncAll } from "@/lib/offline/push";
+import { WRITABLE_TABLES, readColumns, renderColumns } from "./generate-columns";
 import {
-  applyBatch, closeStore, forgetUser, getMeta, rememberAccount, rowsOf, signSession, verifyAccount, verifySession,
+  applyBatch, closeStore, forgetUser, getMeta, pendingCount, rememberAccount, rowsOf, signSession, verifyAccount, verifySession,
 } from "@/lib/offline/store";
 import { createLocalClient } from "@/lib/offline/client";
 import { VIEW_TABLES } from "@/lib/offline/schema";
@@ -112,10 +115,22 @@ function remoteFor(user: string): RemoteClient {
     from: (table) => ({ select: () => builder(table) as never }),
     rpc: (name, args) => {
       const run = async () => {
-        const rows = name === "sync_changes"
-          ? await asUser<{ r: unknown }>(user, "select sync_changes($1,$2,$3) r", [args.p_org, args.p_since, args.p_limit ?? 500])
-          : await asUser<{ r: unknown }>(user, "select my_permissions($1) r", [args.org]);
-        return { data: rows[0]!.r, error: null };
+        try {
+          if (name === "sync_apply_op") {
+            const rows = await writeAs(user, "select sync_apply_op($1,$2,$3,$4,$5,$6) r", [args.p_org, args.p_device, args.p_op_id, args.p_kind, args.p_args, args.p_occurred_at]);
+            return { data: rows[0].r, error: null };
+          }
+          if (name === "sync_register_device") {
+            const rows = await writeAs(user, "select sync_register_device($1,$2,$3) r", [args.p_org, args.p_device, args.p_name]);
+            return { data: rows[0].r, error: null };
+          }
+          const rows = name === "sync_changes"
+            ? await asUser<{ r: unknown }>(user, "select sync_changes($1,$2,$3) r", [args.p_org, args.p_since, args.p_limit ?? 500])
+            : await asUser<{ r: unknown }>(user, "select my_permissions($1) r", [args.org]);
+          return { data: rows[0]!.r, error: null };
+        } catch (err) {
+          return { data: null, error: { message: (err as Error).message } };
+        }
       };
       return run();
     },
@@ -189,8 +204,8 @@ async function main() {
   await writeAs(reception, "select check_in($1,$2,'qr')", [org, alice]);
   await writeAs(reception, "select check_in($1,$2,'search')", [org, bob]);
   await writeAs(owner, "insert into expenses (organization_id,category,amount,spent_on,description) values ($1,'electricity',15.5,current_date,'STEG'),($1,'rent',300,current_date,'Loyer'),($1,'rent',12.25,current_date,'Annexe')", [org]);
-  const session = (await writeAs(owner, "insert into sessions (organization_id,kind,title,coach_id,starts_at,ends_at,capacity) values ($1,'group_class','Yoga',$2,now()+interval '1 day',now()+interval '1 day 1 hour',10) returning id", [org, coach]))[0].id as string;
-  await writeAs(reception, "select book_session($1,$2,$3)", [org, session, alice]);
+  const session_ = (await writeAs(owner, "insert into sessions (organization_id,kind,title,coach_id,starts_at,ends_at,capacity) values ($1,'group_class','Yoga',$2,now()+interval '1 day',now()+interval '1 day 1 hour',10) returning id", [org, coach]))[0].id as string;
+  await writeAs(reception, "select book_session($1,$2,$3)", [org, session_, alice]);
   await writeAs(owner, "insert into leads (organization_id,first_name,last_name,phone,coach_id) values ($1,'Lina','Prospect','99 000 111',$2)", [org, coach]);
   const equipment = (await writeAs(owner, "insert into equipment (organization_id,name) values ($1,'Tapis') returning id", [org]))[0].id as string;
   await writeAs(owner, "insert into equipment_maintenance (organization_id,equipment_id,performed_on,description) values ($1,$2,current_date,'Révision')", [org, equipment]);
@@ -337,16 +352,16 @@ async function main() {
     };
     walk(join(root, "..", "src"));
     const reads = new Set(["my_permissions", "dashboard_stats", "revenue_report", "revenue_by_plan", "profit_and_loss", "find_member_duplicates", "refresh_notifications"]);
-    for (const name of names) {
+    for (const name of [...names].filter((n) => reads.has(n))) {
       const r = runLocalRpc(owner, name, { p_org: org, org, p_from: today, p_to: today, p_first_name: "x", p_last_name: "y" });
       if (reads.has(name)) assert(!r.error, `${name} : ${JSON.stringify(r.error)}`);
-      else assert(r.error && /hors ligne/.test(r.error.message), `${name} devrait être refusée hors ligne`);
+      else assert(name === "convert_lead" || name === "log_member_export" || r.error, `${name} devrait être refusée sans ses paramètres`);
     }
   });
   await test("relation imbriquée : séance, réservations, membre, coach", async () => {
-    const r = await q(owner, "sessions").select("id, title, coach:coaches(full_name), bookings(id, status, member:members(first_name, member_code))").eq("id", session).single();
+    const r = await q(owner, "sessions").select("id, title, coach:coaches(full_name), bookings(id, status, member:members(first_name, member_code))").eq("id", session_).single();
     const [sql] = await asUser<{ r: { title: string; coach: string; n: number; first: string } }>(owner,
-      "select json_build_object('title',s.title,'coach',c.full_name,'n',count(b.id),'first',min(m.first_name)) r from sessions s left join coaches c on c.id=s.coach_id left join bookings b on b.session_id=s.id left join members m on m.id=b.member_id where s.id=$1 group by s.title,c.full_name", [session]);
+      "select json_build_object('title',s.title,'coach',c.full_name,'n',count(b.id),'first',min(m.first_name)) r from sessions s left join coaches c on c.id=s.coach_id left join bookings b on b.session_id=s.id left join members m on m.id=b.member_id where s.id=$1 group by s.title,c.full_name", [session_]);
     const d = r.data as { title: string; coach: { full_name: string }; bookings: Array<{ member: { first_name: string } }> };
     assert(d.title === sql!.r.title && d.coach.full_name === sql!.r.coach && d.bookings.length === sql!.r.n && d.bookings[0]!.member.first_name === sql!.r.first, JSON.stringify(d));
   });
@@ -388,23 +403,6 @@ async function main() {
       threw = true;
     }
     assert(threw, "aucune erreur");
-  });
-
-  console.log("\nÉcritures refusées hors ligne");
-  await test("insert, update, delete et fonctions d'écriture sont refusés, sans rien modifier", async () => {
-    const before = rowsOf(owner, "members").length;
-    for (const r of [
-      await new LocalQuery(owner, "members").insert().select("id").single(),
-      await new LocalQuery(owner, "members").update().eq("id", alice),
-      await new LocalQuery(owner, "leads").delete().eq("id", alice),
-    ]) {
-      assert(r.error && /hors ligne/.test(r.error.message), JSON.stringify(r));
-    }
-    for (const name of ["check_in", "record_payment", "create_subscription", "refund_payment", "log_member_export"]) {
-      const r = runLocalRpc(owner, name, { p_org: org });
-      assert(r.error?.code === "22023" && /hors ligne/.test(r.error.message), `${name} : ${JSON.stringify(r)}`);
-    }
-    assert(rowsOf(owner, "members").length === before, "données modifiées");
   });
 
   console.log("\nMises à jour : seulement ce qui a changé");
@@ -563,9 +561,388 @@ async function main() {
     assert(threw && rowsOf(owner, "leads").length === before && getMeta(owner, `cursor:${org}`) === cursor, "écriture partielle");
   });
   await test("compte retiré : données et connexion hors ligne effacées du poste", () => {
+    rememberAccount("coach@test.tn", "MotDePasse1234", coachUser);
     forgetUser(coachUser);
     assert(rowsOf(coachUser, "members").length === 0, "données restantes");
     assert(!verifyAccount("coach@test.tn", "MotDePasse1234").ok, "connexion encore possible");
+  });
+
+  // =========================================================================
+  // Écritures hors ligne : file d'attente et rejeu
+  // =========================================================================
+  console.log("\nÉcritures hors ligne");
+  const session = (u: string) => createLocalClient(signSession(u, Date.now() + 3_600_000));
+  const flush = (u: string) => syncAll(remoteFor(u), u, [org]);
+  for (const u of [owner, reception, coachUser]) {
+    await registerDevice(remoteFor(u), [org], "Test");
+    await pullAll(remoteFor(u), u, [org], [org]);
+  }
+  const serverRow = async (table: string, id: string) =>
+    (await db.query("select to_json(t) r from public." + table + " t where id::text = $1", [id])).rows[0]?.r as Record<string, unknown> | undefined;
+  const newLocalMember = async (u: string, first: string, last: string, phone = "20 000 000") =>
+    ((await session(u).from("members").insert({ organization_id: org, first_name: first, last_name: last, phone } as never).select("id, member_code").single()).data as unknown as { id: string; member_code: string });
+
+  await test("les colonnes générées correspondent au schéma réel", async () => {
+    const expected = renderColumns(await readColumns(db, WRITABLE_TABLES)).replace(/\r\n/g, "\n");
+    const actual = readFileSync(join(root, "..", "src", "lib", "offline", "columns.generated.ts"), "utf8").replace(/\r\n/g, "\n");
+    assert(actual === expected, "fichier périmé : lancez npm run db:columns");
+  });
+  await test("entrée hors ligne : visible tout de suite, en attente, puis sur le serveur avec le même identifiant", async () => {
+    const m = await newLocalMember(reception, "Hors", "Entree");
+    await flush(reception);
+    await writeAs(owner, "select create_subscription($1,$2,$3,$4)", [org, m.id, monthly, randomUUID()]);
+    await pullAll(remoteFor(reception), reception, [org]);
+    const r = (await session(reception).rpc("check_in", { p_org: org, p_member: m.id, p_method: "qr" })).data as { result: string; attendance_id: string; checked_in_at: string };
+    assert(r.result === "granted", JSON.stringify(r));
+    assert(rowsOf(reception, "attendance").some((a) => a.id === r.attendance_id), "absente de la copie");
+    assert(pendingCount(reception) === 1, String(pendingCount(reception)));
+    assert(!(await serverRow("attendance", r.attendance_id)), "déjà sur le serveur");
+    await flush(reception);
+    assert(pendingCount(reception) === 0, "file non vidée");
+    const s = await serverRow("attendance", r.attendance_id);
+    assert(s && Math.abs(Date.parse(s.checked_in_at as string) - Date.parse(r.checked_in_at)) < 1000, JSON.stringify(s));
+  });
+  await test("deuxième scan rapproché : doublon reconnu, aucune opération ajoutée", async () => {
+    const m = rowsOf(reception, "members").find((x) => x.last_name === "Entree")!;
+    const r = (await session(reception).rpc("check_in", { p_org: org, p_member: m.id, p_method: "qr" })).data as { result: string };
+    assert(r.result === "duplicate" && pendingCount(reception) === 0, JSON.stringify(r));
+  });
+  await test("mêmes règles qu'en ligne : refus sans abonnement, forçage réservé au propriétaire", async () => {
+    const m = await newLocalMember(reception, "Sans", "Abonnement");
+    const denied = (await session(reception).rpc("check_in", { p_org: org, p_member: m.id, p_method: "search" })).data as { result: string; can_override: boolean };
+    assert(denied.result === "denied" && !denied.can_override, JSON.stringify(denied));
+    const forced = await session(reception).rpc("check_in", { p_org: org, p_member: m.id, p_method: "search", p_override_reason: "VIP" });
+    assert(forced.error?.code === "42501", JSON.stringify(forced));
+    await flush(reception);
+    await pullAll(remoteFor(owner), owner, [org]);
+    const ok1 = (await session(owner).rpc("check_in", { p_org: org, p_member: m.id, p_method: "search", p_override_reason: "Essai offert" })).data as { result: string; attendance_id: string };
+    assert(ok1.result === "granted", JSON.stringify(ok1));
+    await flush(owner);
+    assert((await serverRow("attendance", ok1.attendance_id))?.override_reason === "Essai offert", "motif perdu");
+  });
+  await test("ce qu'on voit hors ligne est exactement ce que le serveur enregistre : membre, abonnement, paiement, remboursement", async () => {
+    await pullAll(remoteFor(owner), owner, [org]);
+    const c = session(owner);
+    const m = await newLocalMember(owner, "Chaine", "Complete", "+216 21 222 333");
+    const request = randomUUID();
+    const sub = (await c.rpc("create_subscription", { p_org: org, p_member: m.id, p_plan: monthly, p_request_id: request, p_start: null, p_discount: 5, p_notes: "Hors ligne" })).data as string;
+    const pay = (await c.rpc("record_payment", { p_org: org, p_member: m.id, p_method: cash, p_amount: 40.5, p_request_id: randomUUID(), p_subscription: sub })).data as Array<{ payment_id: string; receipt_number: string }>;
+    assert(/^R-[A-Z]+-\d{4}-\d{6}$/.test(pay[0]!.receipt_number), pay[0]!.receipt_number);
+    assert(/^M-[A-Z]+-\d{6}$/.test(m.member_code), m.member_code);
+    const refund = await c.rpc("refund_payment", { p_org: org, p_payment: pay[0]!.payment_id, p_type: "refund", p_amount: 0.5, p_reason: "Erreur de saisie", p_request_id: randomUUID() });
+    assert(!refund.error, JSON.stringify(refund));
+
+    const pick = (row: Record<string, unknown>, keys: string[]) => Object.fromEntries(keys.map((k) => [k, row[k] ?? null]));
+    const memberKeys = ["first_name", "last_name", "full_name", "member_code", "phone", "phone_digits", "registered_on", "membership_end_date", "membership_suspended", "membership_status", "coach_name"];
+    const subKeys = ["plan_name", "kind", "start_date", "end_date", "price", "discount", "total_due", "amount_paid", "balance", "payment_status", "effective_status", "status", "notes", "request_id", "member_code", "member_name"];
+    const payKeys = ["amount", "refunded_amount", "net_amount", "receipt_number", "method_name", "member_name", "member_code", "plan_name", "request_id"];
+    const localView = async (view: string, column: string, value: string) => (await q(owner, view).select("*").eq(column, value)).data as Array<Record<string, unknown>>;
+    const seenMember = pick((await localView("member_directory", "id", m.id))[0]!, memberKeys);
+    const seenSub = pick((await localView("subscription_overview", "member_id", m.id))[0]!, subKeys);
+    const seenPay = pick((await localView("payment_ledger", "member_id", m.id))[0]!, payKeys);
+
+    const outcome = await flush(owner);
+    assert(outcome.status === "ok" && outcome.pushed.rejected === 0 && outcome.pushed.conflicts === 0, JSON.stringify(outcome));
+    const sql = async (view: string, column: string) => (await db.query("select to_json(t) r from public." + view + " t where " + column + "::text = $1", [m.id])).rows.map((x) => x.r as Record<string, unknown>);
+    assertSame(seenMember, pick((await sql("member_directory", "id"))[0]!, memberKeys), "membre");
+    assertSame(seenSub, pick((await sql("subscription_overview", "member_id"))[0]!, subKeys), "abonnement");
+    assertSame(seenPay, pick((await sql("payment_ledger", "member_id"))[0]!, payKeys), "paiement");
+    assert((await q(owner, "subscriptions").select("id").eq("member_id", m.id)).data !== null, "copie vide");
+    assert(rowsOf(owner, "subscriptions").every((s) => !s._offline), "ligne provisoire restante");
+  });
+  await test("suspension, reprise, prolongation et annulation : mêmes résultats que le serveur", async () => {
+    const c = session(owner);
+    const m = await newLocalMember(owner, "Cycle", "Abonnement");
+    const start = (await db.query("select ((now() at time zone 'Africa/Tunis')::date - 3)::text d")).rows[0].d as string;
+    const sub = (await c.rpc("create_subscription", { p_org: org, p_member: m.id, p_plan: monthly, p_request_id: randomUUID(), p_start: start })).data as string;
+    const keys = ["status", "start_date", "end_date", "suspended_on", "cancel_reason"];
+    const memberKeys = ["membership_end_date", "membership_suspended"];
+    const compare = async (what: string) => {
+      const pickRow = (r: Record<string, unknown>, ks: string[]) => Object.fromEntries(ks.map((k) => [k, r[k] ?? null]));
+      const seen = rowsOf(owner, "subscriptions").find((s) => s.member_id === m.id)!;
+      const seenM = rowsOf(owner, "members").find((x) => x.id === m.id)!;
+      const expectSub = pickRow(seen, keys);
+      const expectMember = pickRow(seenM, memberKeys);
+      const out = await flush(owner);
+      assert(out.pushed.rejected === 0, what + " : " + JSON.stringify(out.pushed));
+      const srv = (await db.query("select to_json(s) r from subscriptions s where member_id = $1", [m.id])).rows[0].r;
+      const srvM = await serverRow("members", m.id);
+      assertSame(expectSub, pickRow(srv, keys), what);
+      assertSame(expectMember, pickRow(srvM!, memberKeys), what + " (membre)");
+      return srv.id as string;
+    };
+    let id = await compare("création");
+    assert(!(await c.rpc("suspend_subscription", { p_org: org, p_sub: id, p_reason: "Blessure" })).error, "suspension");
+    id = await compare("suspension");
+    assert(!(await c.rpc("resume_subscription", { p_org: org, p_sub: id, p_reason: null })).error, "reprise");
+    id = await compare("reprise");
+    assert(!(await c.rpc("extend_subscription", { p_org: org, p_sub: id, p_days: 10, p_reason: "Geste commercial" })).error, "prolongation");
+    id = await compare("prolongation");
+    assert(!(await c.rpc("cancel_subscription", { p_org: org, p_sub: id, p_reason: "Départ" })).error, "annulation");
+    await compare("annulation");
+    void sub;
+  });
+  await test("dates de fin identiques à PostgreSQL, y compris fins de mois et années bissextiles", async () => {
+    for (const start of ["2026-01-15", "2026-01-31", "2024-01-31", "2024-02-29", "2026-03-31", "2026-08-31", "2026-12-31", "2027-02-28"]) {
+      for (const [value, unit] of [[1, "day"], [7, "day"], [1, "week"], [1, "month"], [3, "month"], [6, "month"], [1, "year"]] as const) {
+        const sql = (await db.query("select private.compute_end_date($1::date,$2,$3::public.duration_unit)::text d", [start, value, unit])).rows[0].d;
+        assert(computeEndDate(start, value, unit) === sql, start + " + " + value + " " + unit + " : " + computeEndDate(start, value, unit) + " au lieu de " + sql);
+      }
+    }
+  });
+  await test("chaque type de fiche créé hors ligne a la même forme que sur le serveur", async () => {
+    const c = session(owner);
+    const made: Array<[string, string]> = [];
+    const add = async (table: string, values: Record<string, unknown>) => {
+      const r = await c.from(table).insert({ organization_id: org, ...values } as never).select("id").single();
+      assert(!r.error, table + " : " + JSON.stringify(r.error));
+      made.push([table, (r.data as unknown as { id: string }).id]);
+      return (r.data as unknown as { id: string }).id;
+    };
+    const member = await add("members", { first_name: "Forme", last_name: "Identique", phone: "22 123 456", email: "forme@exemple.tn" });
+    const coachNew = await add("coaches", { full_name: "Coach Local", specialties: ["Yoga", "Boxe"], availability: [{ day: 1, start: "08:00", end: "10:00" }] });
+    await add("leads", { first_name: "Lead", last_name: "Local", phone: "22 000 001", coach_id: coachNew });
+    await add("expenses", { category: "other", amount: 12.5, spent_on: today, description: "Eau" });
+    const eq = await add("equipment", { name: "Vélo" });
+    await add("equipment_maintenance", { equipment_id: eq, performed_on: today, description: "Graissage", next_due_on: "2030-01-01" });
+    await add("sessions", { kind: "group_class", title: "Boxe", coach_id: coachNew, starts_at: "2030-01-01T10:00:00+00:00", ends_at: "2030-01-01T11:00:00+00:00", capacity: 5 });
+    await add("membership_plans", { name: "Pass local", kind: "pass", duration_value: 1, duration_unit: "day", price: 10 });
+    await add("payment_methods", { name: "Virement local", code: "other" });
+    const prog = await add("workout_programs", { name: "Local", member_id: member });
+    const dayId = await add("workout_days", { program_id: prog, day_number: 1, title: "Jambes", position: 1 });
+    await add("workout_exercises", { day_id: dayId, name: "Fente", position: 0 });
+    await add("workout_logs", { program_id: prog, member_id: member, performed_on: today, completed: true });
+    await add("progress_entries", { member_id: member, recorded_on: today, weight_kg: 70.5 });
+    await add("member_notes", { member_id: member, body: "Note locale" });
+    await add("announcements", { title: "Fermeture", body: "Lundi" });
+
+    const seen = made.map(([table, id]) => ({ table, id, row: { ...rowsOf(owner, table).find((r) => r.id === id)! } }));
+    const out = await flush(owner);
+    assert(out.pushed.rejected === 0 && out.pushed.conflicts === 0, JSON.stringify(out.pushed));
+    const ignore = new Set(["created_at", "updated_at", "row_version", "_offline", "last_activity_at"]);
+    for (const { table, id, row } of seen) {
+      const srv = await serverRow(table, id);
+      assert(srv, table + " absent du serveur");
+      assertSame(
+        Object.fromEntries(Object.entries(row).filter(([k]) => !ignore.has(k))),
+        Object.fromEntries(Object.entries(srv).filter(([k]) => !ignore.has(k))),
+        table,
+      );
+    }
+    assert((await serverRow("equipment", eq))!.next_maintenance_on === "2030-01-01", "prochain entretien non mis à jour");
+  });
+  await test("modifier puis supprimer hors ligne : appliqué dans l'ordre", async () => {
+    const c = session(owner);
+    const lead = (await c.from("leads").insert({ organization_id: org, first_name: "Ordre", last_name: "Test", phone: "22 000 002" } as never).select("id").single()).data as unknown as { id: string };
+    const u = await c.from("leads").update({ first_name: "Modifié" } as never, { count: "exact" }).eq("id", lead.id);
+    assert(u.count === 1, JSON.stringify(u));
+    const d = await c.from("leads").delete({ count: "exact" }).eq("id", lead.id);
+    assert(d.count === 1, JSON.stringify(d));
+    const out = await flush(owner);
+    assert(out.pushed.rejected === 0 && out.pushed.conflicts === 0, JSON.stringify(out.pushed));
+    assert(!(await serverRow("leads", lead.id)), "toujours sur le serveur");
+  });
+  await test("réservation puis annulation hors ligne : l'identifiant du serveur est retrouvé", async () => {
+    const c = session(owner);
+    const m = await newLocalMember(owner, "Resa", "Locale");
+    const b = (await c.rpc("book_session", { p_org: org, p_session: session_, p_member: m.id })).data as string;
+    assert(rowsOf(owner, "bookings").some((x) => x.id === b && x.status === "booked"), "non visible");
+    const again = await c.rpc("book_session", { p_org: org, p_session: session_, p_member: m.id });
+    assert(again.error?.code === "23505", JSON.stringify(again));
+    assert(!(await c.rpc("cancel_booking", { p_org: org, p_booking: b })).error, "annulation");
+    const out = await flush(owner);
+    assert(out.pushed.rejected === 0, JSON.stringify(out.pushed));
+    const srv = (await db.query("select status from bookings where member_id = $1", [m.id])).rows;
+    assert(srv.length === 1 && srv[0].status === "cancelled", JSON.stringify(srv));
+  });
+  await test("sortie et correction d'un passage fait hors ligne", async () => {
+    const c = session(owner);
+    const m = rowsOf(owner, "members").find((x) => x.last_name === "Entree")!;
+    await db.query("update attendance set status = 'voided' where member_id = $1", [m.id]);
+    await pullAll(remoteFor(owner), owner, [org]);
+    const a = (await c.rpc("check_in", { p_org: org, p_member: m.id, p_method: "manual" })).data as { attendance_id: string };
+    assert(!(await c.rpc("check_out", { p_org: org, p_attendance: a.attendance_id })).error, "sortie");
+    assert(!(await c.rpc("correct_attendance", { p_org: org, p_attendance: a.attendance_id, p_reason: "Erreur de scan", p_void: true })).error, "correction");
+    const out = await flush(owner);
+    assert(out.pushed.rejected === 0, JSON.stringify(out.pushed));
+    const srv = await serverRow("attendance", a.attendance_id);
+    assert(srv?.status === "voided" && srv.checked_out_at && srv.correction_reason === "Erreur de scan", JSON.stringify(srv));
+  });
+
+  console.log("\nConflits et refus au rejeu");
+  await test("même champ modifié ailleurs : la valeur du serveur reste, l'autre champ passe, revue possible", async () => {
+    const c = session(reception);
+    await pullAll(remoteFor(reception), reception, [org]);
+    await writeAs(owner, "update members set phone = '11 111 111' where id = $1", [dali]);
+    const u = await c.from("members").update({ phone: "99 999 999", address: "Sfax" } as never).eq("id", dali);
+    assert(!u.error, JSON.stringify(u));
+    assert(rowsOf(reception, "members").find((x) => x.id === dali)!.phone === "99 999 999", "effet local absent");
+    const out = await flush(reception);
+    assert(out.pushed.conflicts === 1, JSON.stringify(out.pushed));
+    const srv = await serverRow("members", dali);
+    assert(srv!.phone === "11 111 111" && srv!.address === "Sfax", JSON.stringify(srv));
+    const local = rowsOf(reception, "members").find((x) => x.id === dali)!;
+    assert(local.phone === "11 111 111" && local.address === "Sfax", "copie locale différente du serveur");
+    const review = await asUser<{ status: string; conflicts: Array<{ field: string }> }>(reception, "select status, conflicts from sync_ops where status = 'conflict' and resolved_at is null order by created_at desc limit 1");
+    assert(review[0]?.conflicts[0]?.field === "phone", JSON.stringify(review));
+  });
+  await test("deux postes vendent le même abonnement : refus enregistré, la file continue, la copie se corrige", async () => {
+    const m = await newLocalMember(reception, "Double", "Vente");
+    await flush(reception);
+    await writeAs(owner, "select create_subscription($1,$2,$3,$4)", [org, m.id, monthly, randomUUID()]);
+    const c = session(reception);
+    assert(!(await c.rpc("create_subscription", { p_org: org, p_member: m.id, p_plan: monthly, p_request_id: randomUUID() })).error, "vente locale");
+    const a = (await c.rpc("check_in", { p_org: org, p_member: m.id, p_method: "qr" })).data as { attendance_id: string };
+    const out = await flush(reception);
+    assert(out.pushed.rejected === 1 && out.pushed.applied === 1, JSON.stringify(out.pushed));
+    assert(await serverRow("attendance", a.attendance_id), "l'opération suivante n'est pas passée");
+    assert(rowsOf(reception, "subscriptions").filter((s) => s.member_id === m.id).length === 1, "abonnement refusé encore visible");
+    const n = (await db.query("select count(*) n from subscriptions where member_id = $1", [m.id])).rows[0].n;
+    assert(n === "1", n + " abonnements");
+    const review = await asUser<{ error_message: string }>(reception, "select error_message from sync_ops where status = 'rejected' and kind = 'create_subscription' order by created_at desc limit 1");
+    assert(/déjà une adhésion/.test(review[0]!.error_message), JSON.stringify(review));
+  });
+  await test("trop-perçu entre deux postes : le second refusé, le solde reste juste", async () => {
+    const m = await newLocalMember(reception, "Solde", "Juste");
+    await flush(reception);
+    const sub = (await writeAs(owner, "select create_subscription($1,$2,$3,$4) id", [org, m.id, monthly, randomUUID()]))[0].id as string;
+    await pullAll(remoteFor(reception), reception, [org]);
+    await writeAs(owner, "select * from record_payment($1,$2,$3,80,$4,$5)", [org, m.id, cash, randomUUID(), sub]);
+    assert(!(await session(reception).rpc("record_payment", { p_org: org, p_member: m.id, p_method: cash, p_amount: 80, p_request_id: randomUUID(), p_subscription: sub })).error, "paiement local");
+    const out = await flush(reception);
+    assert(out.pushed.rejected === 1, JSON.stringify(out.pushed));
+    const s = (await db.query("select amount_paid from subscriptions where id = $1", [sub])).rows[0];
+    assert(s.amount_paid === "80.000", s.amount_paid);
+    assert(Number(rowsOf(reception, "subscriptions").find((x) => x.id === sub)!.amount_paid) === 80, "copie locale fausse");
+  });
+  await test("suppression d'une fiche modifiée ailleurs : conservée, conflit signalé", async () => {
+    const lead = (await writeAs(owner, "insert into leads (organization_id,first_name,last_name,phone) values ($1,'Garde','Moi','22 111 222') returning id", [org]))[0].id as string;
+    await pullAll(remoteFor(reception), reception, [org]);
+    await writeAs(owner, "update leads set first_name = 'Modifié' where id = $1", [lead]);
+    await session(reception).from("leads").delete().eq("id", lead);
+    assert(!rowsOf(reception, "leads").some((l) => l.id === lead), "effet local absent");
+    const out = await flush(reception);
+    assert(out.pushed.conflicts === 1, JSON.stringify(out.pushed));
+    assert(await serverRow("leads", lead), "fiche supprimée sur le serveur");
+    assert(rowsOf(reception, "leads").some((l) => l.id === lead), "fiche non revenue sur le poste");
+  });
+  await test("heure du poste dans le futur : refus clair, pas de date fausse", async () => {
+    applyBatch(reception, { enqueue: [{ opId: randomUUID(), user: reception, org, kind: "check_in", args: { member: bob, method: "qr" }, occurredAt: new Date(Date.now() + 86_400_000).toISOString(), label: "Entrée" }] });
+    const out = await flush(reception);
+    assert(out.pushed.rejected === 1, JSON.stringify(out.pushed));
+  });
+
+  console.log("\nCoupures pendant l'envoi");
+  await test("réseau coupé au milieu : rien de perdu ni de doublé, l'envoi reprend où il s'était arrêté", async () => {
+    const c = session(reception);
+    const m = await newLocalMember(reception, "Coupure", "Reseau");
+    const request = randomUUID();
+    assert(!(await c.rpc("record_payment", { p_org: org, p_member: m.id, p_method: cash, p_amount: 15, p_request_id: request })).error, "paiement");
+    assert(pendingCount(reception) === 2, String(pendingCount(reception)));
+    const real = remoteFor(reception);
+    let calls = 0;
+    const flaky: RemoteClient = {
+      ...real,
+      rpc: async (name, args) => {
+        if (name === "sync_apply_op" && ++calls === 2) {
+          // Le serveur enregistre, mais la réponse se perd : le pire cas.
+          await real.rpc(name, args);
+          return { data: null, error: { message: "réseau coupé" } };
+        }
+        return real.rpc(name, args);
+      },
+    };
+    const first = await syncAll(flaky, reception, [org]);
+    assert(first.status === "pending" && first.pushed.error === "réseau coupé", JSON.stringify(first));
+    assert(pendingCount(reception) === 1, "file incorrecte");
+    assert(rowsOf(reception, "payments").some((p) => p.request_id === request), "effet local écrasé pendant la coupure");
+    const second = await flush(reception);
+    assert(second.status === "ok" && pendingCount(reception) === 0, JSON.stringify(second));
+    const n = (await db.query("select count(*) n from payments where request_id = $1", [request])).rows[0].n;
+    assert(n === "1", n + " paiements");
+  });
+  await test("session expirée : la file attend, sans erreur ni perte", async () => {
+    const m = rowsOf(reception, "members").find((x) => x.last_name === "Reseau")!;
+    await session(reception).from("members").update({ address: "Attente" } as never).eq("id", m.id);
+    const expired: RemoteClient = { ...remoteFor(reception), rpc: async () => ({ data: null, error: { message: "JWT expired" } }) };
+    const out = await pushQueue(expired, reception);
+    assert(out.error === "JWT expired" && pendingCount(reception) === 1, JSON.stringify(out));
+    await flush(reception);
+    assert((await serverRow("members", m.id as string))!.address === "Attente", "modification perdue");
+  });
+
+  console.log("\nDroits et isolement");
+  await test("droits vérifiés sur le poste : rien en file pour une action interdite", async () => {
+    const before = pendingCount(reception);
+    const refused = await session(reception).rpc("refund_payment", { p_org: org, p_payment: p1, p_type: "refund", p_amount: 1, p_reason: "Essai", p_request_id: randomUUID() });
+    assert(refused.error?.code === "42501", JSON.stringify(refused));
+    const coachWrite = await session(coachUser).from("members").insert({ organization_id: org, first_name: "X", last_name: "Y" } as never);
+    assert(coachWrite.error?.code === "42501", JSON.stringify(coachWrite));
+    assert(pendingCount(reception) === before && pendingCount(coachUser) === 0, "opération en file");
+  });
+  await test("les actions impossibles sans Internet le disent clairement", async () => {
+    for (const r of [
+      await session(owner).from("staff").update({ role: "owner" } as never).eq("user_id", owner),
+      await session(owner).rpc("convert_lead", { p_org: org, p_lead: bob }),
+      await session(owner).rpc("log_member_export", { p_org: org, p_count: 1, p_filters: {} }),
+    ]) {
+      assert(/nécessite Internet/.test(r.error?.message ?? ""), JSON.stringify(r));
+    }
+    assert(pendingCount(owner) === 0, "opération en file");
+  });
+  await test("chaque compte n'envoie que ses propres actions, sous sa propre identité", async () => {
+    await session(owner).from("members").update({ address: "Par propriétaire" } as never).eq("id", bob);
+    await session(reception).from("members").update({ address: "Par accueil" } as never).eq("id", emna);
+    const out = await pushQueue(remoteFor(reception), reception);
+    assert(out.sent === 1 && pendingCount(owner) === 1, JSON.stringify(out));
+    assert((await serverRow("members", bob))!.address !== "Par propriétaire", "action d'un autre compte envoyée");
+    await flush(owner);
+    await flush(reception);
+    const who = (await db.query("select user_id from sync_ops where args->'changes'->>'address' = 'Par propriétaire'")).rows[0];
+    assert(who.user_id === owner, "mauvaise identité");
+  });
+  await test("le même paiement validé deux fois (double clic) ne crée qu'une opération", async () => {
+    const c = session(reception);
+    const before = pendingCount(reception);
+    const request = randomUUID();
+    const one = (await c.rpc("record_payment", { p_org: org, p_member: bob, p_method: cash, p_amount: 1, p_request_id: request })).data as Array<{ payment_id: string }>;
+    const two = (await c.rpc("record_payment", { p_org: org, p_member: bob, p_method: cash, p_amount: 1, p_request_id: request })).data as Array<{ payment_id: string }>;
+    assert(one[0]!.payment_id === two[0]!.payment_id && pendingCount(reception) === before + 1, "doublon");
+    await flush(reception);
+  });
+  await test("employé désactivé : ses actions restent tracées côté serveur et refusées", async () => {
+    await session(reception).from("members").update({ address: "Par compte désactivé" } as never).eq("id", bob);
+    await db.query("update staff set is_active = false where user_id = $1", [reception]);
+    const out = await pushQueue(remoteFor(reception), reception);
+    await db.query("update staff set is_active = true where user_id = $1", [reception]);
+    assert(out.rejected === 1 && pendingCount(reception) === 0, JSON.stringify(out));
+    assert((await serverRow("members", bob))!.address !== "Par compte désactivé", "modification enregistrée malgré la désactivation");
+    const trace = await db.query("select status from sync_ops where args->'changes'->>'address' = 'Par compte désactivé'");
+    assert(trace.rows[0].status === "rejected", "aucune trace");
+    await pullAll(remoteFor(reception), reception, [org], [org]);
+  });
+  await test("la file est chiffrée : aucune donnée lisible en attente d'envoi", async () => {
+    await session(reception).from("members").update({ address: "Rue-Secrete-En-Attente" } as never).eq("id", bob);
+    for (const f of readdirSync(dir).filter((x) => x.startsWith("castle"))) {
+      assert(!readFileSync(join(dir, f)).toString("latin1").includes("Rue-Secrete-En-Attente"), "donnée lisible dans " + f);
+    }
+    await flush(reception);
+  });
+  await test("clé différente avec des actions en attente : ancienne copie mise de côté, jamais effacée", async () => {
+    await session(reception).from("members").update({ address: "Avant changement de clé" } as never).eq("id", bob);
+    assert(pendingCount(reception) === 1, "préalable");
+    closeStore();
+    const realKey = process.env.CASTLE_DATA_KEY;
+    const before = readdirSync(dir).filter((x) => x.startsWith("castle-illisible")).length;
+    process.env.CASTLE_DATA_KEY = randomBytes(32).toString("base64");
+    assert(pendingCount(reception) === 0, "file lue avec une autre clé");
+    assert(readdirSync(dir).filter((x) => x.startsWith("castle-illisible")).length > before, "ancienne copie non conservée");
+    closeStore();
+    process.env.CASTLE_DATA_KEY = realKey;
+    for (const u of [owner, reception, coachUser]) {
+      await registerDevice(remoteFor(u), [org], "Test");
+      await pullAll(remoteFor(u), u, [org], [org]);
+    }
   });
 
   if (keepDir) {

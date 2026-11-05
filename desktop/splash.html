@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+  <title>Castle CRM</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(40rem 26rem at 50% 42%, rgb(232 38 42 / 0.16), transparent 70%), #0a0808;
+      color: #f7f3f1; font: 14px/1.5 "Segoe UI", system-ui, sans-serif;
+    }
+    svg { height: 148px; width: auto; animation: breathe 3s ease-in-out infinite; }
+    .name { margin: 22px 0 0; padding-left: 0.3em; font-size: 19px; font-weight: 600; letter-spacing: 0.3em; }
+    .status { margin: 10px 0 0; color: #a89f9c; font-size: 13px; }
+    @keyframes breathe {
+      0%, 100% { filter: drop-shadow(0 8px 28px rgb(232 38 42 / 0.28)); transform: translateY(0); }
+      50% { filter: drop-shadow(0 12px 44px rgb(232 38 42 / 0.55)); transform: translateY(-4px); }
+    }
+    @media (prefers-reduced-motion: reduce) { svg { animation: none; } }
+  </style>
+</head>
+<body>
+  <svg viewBox="428 445 629 1031" fill="#e8262a" aria-hidden="true">
+    <polygon points="742,445 847,505 847,605 965,673 965,574 1057,627 1057,829 742,648 428,829 428,627 518,574 518,673 637,605 637,505"/>
+    <polygon points="742,750 1056,932 961,987 742,862 525,987 525,1240 742,1364 961,1239 1056,1294 742,1476 428,1295 428,931"/>
+    <polygon points="742,965 871,1039 833,1062 742,1010 653,1062 653,1165 742,1216 833,1165 833,1138 741,1138 741,1097 873,1097 873,1188 742,1262 613,1188 613,1039"/>
+  </svg>
+  <p class="name">CASTLE</p>
+  <p class="status">Ouverture en cours…</p>
+</body>
+</html>

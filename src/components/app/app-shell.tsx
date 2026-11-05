@@ -81,9 +81,9 @@ export function AppShell(props: ShellProps) {
           </div>
         </header>
         {props.offlineNotice && (
-          <p role="status" className="no-print border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs font-medium text-warning md:px-6">
+          <Link role="status" href="/sync" className="no-print block border-b border-warning/30 bg-warning/10 px-4 py-2 text-center text-xs font-medium text-warning hover:bg-warning/15 md:px-6">
             {props.offlineNotice}
-          </p>
+          </Link>
         )}
         <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{props.children}</main>
       </div>

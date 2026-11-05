@@ -1,12 +1,13 @@
 import "server-only";
-import { OFFLINE_READ_ONLY, type LocalResult } from "./query";
+import { NEEDS_INTERNET, type LocalResult } from "./errors";
 import { getMeta, rowsOf, type Row } from "./store";
 import { addDays, dateInZone, orgTimezone, orgToday, roundMoney } from "./views";
+import { runLocalWriteRpc } from "./writes";
 
 /**
  * Équivalents locaux des fonctions de lecture (migration 0004), sur les seules
  * lignes visibles par ce compte. Le test hors ligne les compare aux fonctions
- * PostgreSQL réelles. Toute fonction qui écrit est refusée hors ligne.
+ * PostgreSQL réelles. Les fonctions qui écrivent sont dans writes.ts.
  */
 type Args = Record<string, unknown>;
 
@@ -222,6 +223,7 @@ export function runLocalRpc(user: string, name: string, args: Args): LocalResult
     case "find_member_duplicates": return findMemberDuplicates(user, args);
     // Simple rafraîchissement des alertes, fait par le serveur au retour d'Internet.
     case "refresh_notifications": return ok(0);
-    default: return { data: null, error: OFFLINE_READ_ONLY, count: null, status: 400, statusText: "" };
+    // convert_lead, log_member_export... : serveur requis.
+    default: return runLocalWriteRpc(user, name, args) ?? NEEDS_INTERNET;
   }
 }

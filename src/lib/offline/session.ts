@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { OFFLINE_COOKIE } from "./client";
 import { isOnline } from "./connectivity";
-import { getMeta, rememberAccount, signSession, verifyAccount } from "./store";
+import { getMeta, pendingCount, rememberAccount, signSession, verifyAccount } from "./store";
 
 /** Une coupure en cours de journée n'interrompt pas le travail pendant ce délai. */
 const SESSION_MS = 12 * 60 * 60 * 1000;
@@ -41,8 +41,13 @@ export async function offlineSignIn(email: string, password: string): Promise<st
     : "Connexion hors ligne impossible : mot de passe incorrect, ou première connexion sur ce poste (Internet requis).";
 }
 
-/** En ligne, la copie locale n'est jamais lue : elle ne peut donc pas gêner le travail. */
-export async function offlineNotice(userId: string): Promise<{ offline: boolean; lastSync: string | null }> {
-  if (await isOnline()) return { offline: false, lastSync: null };
-  return { offline: true, lastSync: getMeta(userId, "last_sync") };
+/** État du poste pour le bandeau. Une panne de la copie locale ne gêne jamais le travail en ligne. */
+export async function offlineNotice(userId: string): Promise<{ offline: boolean; lastSync: string | null; pending: number }> {
+  const offline = !(await isOnline());
+  try {
+    return { offline, lastSync: offline ? getMeta(userId, "last_sync") : null, pending: pendingCount(userId) };
+  } catch (err) {
+    console.error("[stockage]", err instanceof Error ? err.message : err);
+    return { offline, lastSync: null, pending: 0 };
+  }
 }

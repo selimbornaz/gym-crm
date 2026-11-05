@@ -1,7 +1,9 @@
 import "server-only";
+import { NEEDS_INTERNET, type LocalResult } from "./errors";
 import { RELATIONS, VIEW_TABLES, type Relation } from "./schema";
 import { rowsOf, type Row } from "./store";
 import { viewRows } from "./views";
+import { localDelete, localInsert, localUpdate } from "./writes";
 
 /**
  * Lecture locale avec la même interface que le client Supabase : les pages ne
@@ -9,16 +11,6 @@ import { viewRows } from "./views";
  * prises en charge ; toute autre forme lève une erreur explicite plutôt que de
  * renvoyer silencieusement un résultat faux.
  */
-export interface LocalError {
-  code: string;
-  message: string;
-}
-
-export const OFFLINE_READ_ONLY: LocalError = {
-  code: "22023",
-  message: "Mode hors ligne : consultation seulement. Cette action sera possible au retour d'Internet.",
-};
-
 // ---------------------------------------------------------------- comparaisons
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/;
 
@@ -162,15 +154,7 @@ function project(user: string, table: string, row: Row, fields: Field[], embedFi
 }
 
 // ---------------------------------------------------------------- requête
-export interface LocalResult {
-  data: unknown;
-  error: LocalError | null;
-  count: number | null;
-  status: number;
-  statusText: string;
-}
-
-const failure = (error: LocalError): LocalResult => ({ data: null, error, count: null, status: 400, statusText: "" });
+export type { LocalResult };
 
 export class LocalQuery implements PromiseLike<LocalResult> {
   private fields: Field[] = [{ star: true }];
@@ -182,13 +166,14 @@ export class LocalQuery implements PromiseLike<LocalResult> {
   private wantCount = false;
   private head = false;
   private cardinality: "many" | "single" | "maybe" = "many";
-  private isWrite = false;
+  private write: { kind: "insert"; values: Row | Row[] } | { kind: "update"; patch: Row } | { kind: "delete" } | { kind: "upsert" } | null = null;
+  private returning = false;
 
   constructor(private user: string, private table: string) {}
 
   select(columns = "*", options?: { count?: string; head?: boolean }) {
-    // Après insert/update, `.select()` ne change rien : l'écriture est déjà refusée.
-    if (!this.isWrite) this.fields = parseSelect(columns);
+    this.fields = parseSelect(columns);
+    if (this.write) this.returning = true;
     this.wantCount = Boolean(options?.count);
     this.head = Boolean(options?.head);
     return this;
@@ -249,13 +234,39 @@ export class LocalQuery implements PromiseLike<LocalResult> {
   single() { this.cardinality = "single"; return this; }
   maybeSingle() { this.cardinality = "maybe"; return this; }
 
-  insert() { this.isWrite = true; return this; }
-  update() { this.isWrite = true; return this; }
-  upsert() { this.isWrite = true; return this; }
-  delete() { this.isWrite = true; return this; }
+  insert(values: Row | Row[]) { this.write = { kind: "insert", values }; return this; }
+  update(patch: Row, options?: { count?: string }) { this.write = { kind: "update", patch }; this.wantCount = Boolean(options?.count); return this; }
+  upsert() { this.write = { kind: "upsert" }; return this; }
+  delete(options?: { count?: string }) { this.write = { kind: "delete" }; this.wantCount = Boolean(options?.count); return this; }
+
+  private runWrite(): LocalResult {
+    const write = this.write!;
+    if (write.kind === "upsert") return NEEDS_INTERNET;
+    const targets = write.kind === "insert" ? [] : rowsOf(this.user, this.table).filter((row) => this.predicates.every((p) => p(row)));
+    const { result, rows } = write.kind === "insert"
+      ? localInsert(this.user, this.table, write.values)
+      : write.kind === "update"
+        ? localUpdate(this.user, this.table, write.patch, targets)
+        : localDelete(this.user, this.table, targets);
+    if (result.error) return result;
+    const count = this.wantCount ? rows.length : null;
+    if (!this.returning) return { data: null, error: null, count, status: 200, statusText: "OK" };
+    const data = rows.map((row) => project(this.user, this.table, row, this.fields, this.embedFilters));
+    return this.shape(data, count);
+  }
+
+  private shape(data: Row[], count: number | null): LocalResult {
+    if (this.cardinality !== "many") {
+      if (data.length > 1 || (data.length === 0 && this.cardinality === "single")) {
+        return { data: null, error: { code: "PGRST116", message: "Cannot coerce the result to a single JSON object" }, count: null, status: 406, statusText: "" };
+      }
+      return { data: data[0] ?? null, error: null, count, status: 200, statusText: "OK" };
+    }
+    return { data, error: null, count, status: 200, statusText: "OK" };
+  }
 
   private run(): LocalResult {
-    if (this.isWrite) return failure(OFFLINE_READ_ONLY);
+    if (this.write) return this.runWrite();
 
     let rows = sourceRows(this.user, this.table).filter((row) => this.predicates.every((p) => p(row)));
 
@@ -289,13 +300,7 @@ export class LocalQuery implements PromiseLike<LocalResult> {
     if (this.head) return { data: null, error: null, count, status: 200, statusText: "OK" };
     const data = rows.map((row) => project(this.user, this.table, row, this.fields, this.embedFilters));
 
-    if (this.cardinality !== "many") {
-      if (data.length > 1 || (data.length === 0 && this.cardinality === "single")) {
-        return { data: null, error: { code: "PGRST116", message: "Cannot coerce the result to a single JSON object" }, count: null, status: 406, statusText: "" };
-      }
-      return { data: data[0] ?? null, error: null, count: this.wantCount ? count : null, status: 200, statusText: "OK" };
-    }
-    return { data, error: null, count: this.wantCount ? count : null, status: 200, statusText: "OK" };
+    return this.shape(data, this.wantCount ? count : null);
   }
 
   then<A = LocalResult, B = never>(

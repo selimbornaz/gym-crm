@@ -132,11 +132,11 @@ async function applyChanges(client: RemoteClient, user: string, org: string, sin
 }
 
 /** Synchronise les salles de cet utilisateur vers le poste. */
-export async function pullAll(client: RemoteClient, user: string, orgs: string[]): Promise<SyncSummary> {
+export async function pullAll(client: RemoteClient, user: string, orgs: string[], forceFull: string[] = []): Promise<SyncSummary> {
   const summary: SyncSummary = { organizations: orgs.length, fullCopies: 0, upserted: 0, removed: 0, at: new Date().toISOString() };
   for (const org of orgs) {
     const perms = must(await client.rpc("my_permissions", { org }), "Permissions") as string[];
-    const saved = getMeta(user, cursorKey(org));
+    const saved = forceFull.includes(org) ? null : getMeta(user, cursorKey(org));
     let needFull = saved === null;
     if (saved !== null) {
       const result = await applyChanges(client, user, org, Number(saved));

@@ -7,7 +7,7 @@
  */
 const { app, BrowserWindow, dialog, Menu, net, safeStorage, session, shell, utilityProcess } = require("electron");
 const { createHash, randomBytes } = require("node:crypto");
-const { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } = require("node:fs");
+const { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } = require("node:fs");
 const path = require("node:path");
 const tcp = require("node:net");
 
@@ -19,7 +19,7 @@ if (app.isPackaged && DEBUG_SWITCHES.some((name) => app.commandLine.hasSwitch(na
 
 const TEST_URL = !app.isPackaged && process.env.CASTLE_URL ? process.env.CASTLE_URL : null;
 const PREFERRED_PORT = 47615;
-const SYNC_INTERVAL_MS = 60_000;
+const SYNC_INTERVAL_MS = 30_000;
 const SERVER_START_TIMEOUT_MS = 60_000;
 let CRM_URL = TEST_URL ?? "";
 let CRM_ORIGIN = TEST_URL ? new URL(TEST_URL).origin : "";
@@ -51,6 +51,7 @@ let serverProcess = null;
 let syncTimer = null;
 let quitting = false;
 let syncAfterLoad = true;
+let firstPageLogged = false;
 const localToken = randomBytes(32).toString("hex");
 
 /** Journal technique du poste (états et erreurs, jamais de données de membres). */
@@ -73,9 +74,17 @@ function loadDataKey() {
   const file = path.join(app.getPath("userData"), "data-key.bin");
   const fingerprint = (key) => createHash("sha256").update(key).digest("hex").slice(0, 8);
   if (existsSync(file)) {
-    const key = safeStorage.decryptString(readFileSync(file));
-    logLine(`[clé] chargée ${fingerprint(key)} (version ${app.getVersion()})`);
-    return key;
+    try {
+      const key = safeStorage.decryptString(readFileSync(file));
+      logLine(`[clé] chargée ${fingerprint(key)} (version ${app.getVersion()})`);
+      return key;
+    } catch (err) {
+      // Arrêt brutal juste après le premier lancement : Windows n'a pas conservé de quoi
+      // relire la clé. Le logiciel doit quand même démarrer : l'ancienne clé est mise de
+      // côté, la copie locale aussi (par le serveur), et tout est retéléchargé.
+      logLine(`[clé] illisible, nouvelle clé créée : ${err.message}`);
+      renameSync(file, `${file}.illisible-${Date.now()}`);
+    }
   }
   const key = randomBytes(32).toString("base64");
   mkdirSync(path.dirname(file), { recursive: true });
@@ -98,7 +107,7 @@ function freePort() {
 
 function startServer(port, dataKey) {
   const dir = app.isPackaged ? path.join(process.resourcesPath, "server") : path.join(__dirname, "server");
-  serverProcess = utilityProcess.fork(path.join(dir, "server.js"), [], {
+  serverProcess = utilityProcess.fork(path.join(__dirname, "server-entry.cjs"), [], {
     cwd: dir,
     serviceName: "Castle CRM Server",
     stdio: "pipe",
@@ -110,6 +119,8 @@ function startServer(port, dataKey) {
       CASTLE_DATA_DIR: (!app.isPackaged && process.env.CASTLE_TEST_DATA_DIR) || path.join(app.getPath("userData"), "data"),
       CASTLE_DATA_KEY: dataKey,
       CASTLE_LOCAL_TOKEN: localToken,
+      CASTLE_SERVER_DIR: dir,
+      CASTLE_COMPILE_CACHE: path.join(app.getPath("userData"), "compile-cache"),
     },
   });
   serverProcess.stderr?.on("data", (chunk) => logLine(`[serveur] ${String(chunk).trim().slice(0, 800)}`));
@@ -225,7 +236,13 @@ function createWindow() {
     if (previous.includes("/login") && !url.includes("/login")) syncAfterLoad = true;
   });
   webContents.on("did-finish-load", () => {
-    if (!syncAfterLoad || new URL(webContents.getURL()).pathname === "/login") return;
+    const url = webContents.getURL();
+    if (!isCrm(url)) return;
+    if (!firstPageLogged) {
+      firstPageLogged = true;
+      logLine("[démarrage] première page affichée");
+    }
+    if (!syncAfterLoad || new URL(url).pathname === "/login") return;
     syncAfterLoad = false;
     syncNow();
   });
@@ -254,7 +271,9 @@ function createWindow() {
     if (details.reason !== "clean-exit") webContents.reload();
   });
 
-  mainWindow.loadURL(CRM_URL);
+  // Le logo s'affiche tout de suite ; le CRM prend sa place dès que le serveur local répond.
+  if (TEST_URL) mainWindow.loadURL(CRM_URL);
+  else mainWindow.loadFile(path.join(__dirname, "splash.html"));
 }
 
 function buildMenu() {
@@ -335,6 +354,7 @@ if (!app.requestSingleInstanceLock()) {
     );
     buildMenu();
     logLine(`[démarrage] version ${app.getVersion()}`);
+    createWindow();
 
     if (!TEST_URL) {
       try {
@@ -342,7 +362,7 @@ if (!app.requestSingleInstanceLock()) {
         const port = await freePort();
         logLine(`[démarrage] port ${port}`);
         // Même nom d'hôte que les redirections du serveur : sinon les cookies de session se perdent.
-        CRM_URL = `http://localhost:${port}/`;
+        CRM_URL = `http://localhost:${port}/dashboard`;
         CRM_ORIGIN = new URL(CRM_URL).origin;
         lastUrl = CRM_URL;
         startServer(port, dataKey);
@@ -355,7 +375,7 @@ if (!app.requestSingleInstanceLock()) {
         return;
       }
       syncTimer = setInterval(syncNow, SYNC_INTERVAL_MS);
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.loadURL(CRM_URL);
     }
-    createWindow();
   });
 }

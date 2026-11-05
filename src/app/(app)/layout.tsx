@@ -28,8 +28,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1") {
     const session = await import("@/lib/offline/session");
     const status = await session.offlineNotice(ctx.user.id);
+    const waiting = status.pending > 0 ? ` · ${status.pending} action${status.pending > 1 ? "s" : ""} en attente d'envoi` : "";
     if (status.offline) {
-      offlineNotice = `Mode hors ligne : consultation seulement${status.lastSync ? ` · données du ${formatDateTime(status.lastSync)}` : ""}`;
+      offlineNotice = `Mode hors ligne${status.lastSync ? ` · données du ${formatDateTime(status.lastSync)}` : ""}${waiting}`;
+    } else {
+      const { count: toReview } = await ctx.supabase
+        .from("sync_ops")
+        .select("op_id", { count: "exact", head: true })
+        .eq("organization_id", ctx.org.id)
+        .eq("user_id", ctx.user.id)
+        .in("status", ["conflict", "rejected"])
+        .is("resolved_at", null);
+      const review = toReview ? ` · ${toReview} action${toReview > 1 ? "s" : ""} à vérifier` : "";
+      if (waiting || review) offlineNotice = `Synchronisation${waiting}${review}`;
     }
   }
 

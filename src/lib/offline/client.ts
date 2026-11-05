@@ -1,5 +1,6 @@
 import "server-only";
-import { LocalQuery, OFFLINE_READ_ONLY, type LocalError } from "./query";
+import { NEEDS_INTERNET, type LocalError } from "./errors";
+import { LocalQuery } from "./query";
 import { runLocalRpc } from "./rpc";
 import { accountEmail, verifySession } from "./store";
 
@@ -34,14 +35,14 @@ export function createLocalClient(sessionCookie: string | undefined) {
           ? { data: { user: { id: userId, email: accountEmail(userId) } }, error: null }
           : { data: { user: null }, error: { name: "AuthSessionMissingError", message: "Session absente" } },
       signOut: async () => ({ error: null }),
-      signInWithPassword: async () => ({ data: { user: null }, error: OFFLINE_READ_ONLY }),
-      resetPasswordForEmail: async () => ({ data: null, error: OFFLINE_READ_ONLY }),
-      updateUser: async () => ({ data: { user: null }, error: OFFLINE_READ_ONLY }),
+      signInWithPassword: async () => ({ data: { user: null }, error: NEEDS_INTERNET.error }),
+      resetPasswordForEmail: async () => ({ data: null, error: NEEDS_INTERNET.error }),
+      updateUser: async () => ({ data: { user: null }, error: NEEDS_INTERNET.error }),
     },
     storage: {
       from: () => ({
         createSignedUrl: async () => ({ data: null, error: { message: "Photo indisponible hors ligne" } }),
-        upload: async () => ({ data: null, error: OFFLINE_READ_ONLY }),
+        upload: async () => ({ data: null, error: NEEDS_INTERNET.error }),
       }),
     },
   };

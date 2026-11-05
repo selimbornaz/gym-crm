@@ -1,6 +1,6 @@
 import "server-only";
-import { createCipheriv, createDecipheriv, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { mkdirSync } from "node:fs";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { existsSync, mkdirSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
@@ -20,25 +20,11 @@ interface StoreState {
 
 const holder = globalThis as unknown as { __castleStore?: StoreState };
 
-/**
- * Une copie chiffrée avec une autre clé est illisible, mais tout vient du serveur :
- * on l'efface et elle sera retéléchargée, plutôt que de bloquer l'application.
- */
-function resetIfKeyChanged(db: DatabaseSync, key: Buffer): void {
-  const check = createHmac("sha256", key).update("castle-store-key-check").digest("hex");
+const keyCheck = (key: Buffer) => createHmac("sha256", key).update("castle-store-key-check").digest("hex");
+
+function keyMismatch(db: DatabaseSync, key: Buffer): boolean {
   const saved = db.prepare("select v from store_info where k = 'key_check'").get() as { v: string } | undefined;
-  if (saved?.v === check) return;
-  const hasData = (db.prepare("select exists (select 1 from rows union all select 1 from meta union all select 1 from accounts) n").get() as { n: number }).n === 1;
-  db.exec("begin immediate");
-  try {
-    if (hasData) db.exec("delete from rows; delete from meta; delete from accounts;");
-    db.prepare("insert into store_info (k, v) values ('key_check', ?) on conflict (k) do update set v = excluded.v").run(check);
-    db.exec("commit");
-  } catch (err) {
-    db.exec("rollback");
-    throw err;
-  }
-  if (hasData) console.error("[stockage] clé différente : copie locale effacée, nouveau téléchargement à la prochaine synchronisation");
+  return saved !== undefined && saved.v !== keyCheck(key);
 }
 
 function state(): StoreState {
@@ -48,7 +34,20 @@ function state(): StoreState {
   if (!dir || key.length !== 32) throw new Error("Stockage local indisponible : clé ou dossier manquant");
   mkdirSync(dir, { recursive: true });
   const { DatabaseSync: Database } = process.getBuiltinModule("node:sqlite");
-  const db = new Database(join(dir, "castle.db"));
+  const file = join(dir, "castle.db");
+  let db = new Database(file);
+  db.exec("create table if not exists store_info (k text primary key, v text not null) without rowid");
+  if (keyMismatch(db, key)) {
+    // Copie illisible avec cette clé : mise de côté, jamais effacée, car elle peut
+    // contenir des actions pas encore envoyées. Le poste repart avec une nouvelle série.
+    db.close();
+    const aside = join(dir, `castle-illisible-${Date.now()}.db`);
+    renameSync(file, aside);
+    for (const suffix of ["-wal", "-shm"]) if (existsSync(file + suffix)) renameSync(file + suffix, aside + suffix);
+    console.error("[stockage] clé différente : ancienne copie mise de côté, nouveau téléchargement à la prochaine synchronisation");
+    db = new Database(file);
+    db.exec("create table if not exists store_info (k text primary key, v text not null) without rowid");
+  }
   db.exec(`
     pragma journal_mode = wal;
     pragma synchronous = normal;
@@ -62,9 +61,14 @@ function state(): StoreState {
       email_mac text primary key, user_id text not null, email blob not null, salt blob not null, hash blob not null,
       failed integer not null default 0, locked_until integer not null default 0
     ) without rowid;
-    create table if not exists store_info (k text primary key, v text not null) without rowid;
+    create table if not exists queue (
+      seq integer primary key autoincrement, user_id text not null, org text not null, op_id text not null unique,
+      kind text not null, occurred_at text not null, data blob not null
+    );
+    create index if not exists queue_user on queue (user_id, seq);
   `);
-  resetIfKeyChanged(db, key);
+  db.prepare("insert or ignore into store_info (k, v) values ('key_check', ?)").run(keyCheck(key));
+  db.prepare("insert or ignore into store_info (k, v) values ('device_id', ?)").run(randomUUID());
   holder.__castleStore = { db, key, cache: new Map() };
   return holder.__castleStore;
 }
@@ -105,12 +109,26 @@ export function rowsOf(user: string, table: string): Row[] {
   return rows;
 }
 
+/** Action faite hors ligne, en attente d'envoi au serveur. */
+export interface QueuedOp {
+  seq?: number;
+  opId: string;
+  user: string;
+  org: string;
+  kind: string;
+  args: Record<string, unknown>;
+  occurredAt: string;
+  label: string;
+}
+
 export interface WriteBatch {
   /** Copie complète d'une table pour une salle : remplace tout ce qui existe. */
   replace?: Array<{ table: string; org: string; rows: Array<{ id: string; org: string; row: Row }> }>;
   upsert?: Array<{ table: string; id: string; org: string; row: Row }>;
   remove?: Array<{ table: string; id: string }>;
   meta?: Record<string, string>;
+  /** Écrites avec les données : un effet local n'existe jamais sans son opération. */
+  enqueue?: QueuedOp[];
 }
 
 /** Écrit tout ou rien : un curseur n'avance jamais sans ses données. */
@@ -135,12 +153,77 @@ export function applyBatch(user: string, batch: WriteBatch): void {
     }
     const setMeta = db.prepare("insert into meta (user_id, k, v) values (?, ?, ?) on conflict (user_id, k) do update set v = excluded.v");
     for (const [k, v] of Object.entries(batch.meta ?? {})) setMeta.run(user, k, encrypt(Buffer.from(v), `${user}|meta|${k}`));
+    const addOp = db.prepare("insert into queue (user_id, org, op_id, kind, occurred_at, data) values (?, ?, ?, ?, ?, ?)");
+    for (const op of batch.enqueue ?? []) {
+      addOp.run(user, op.org, op.opId, op.kind, op.occurredAt,
+        encrypt(Buffer.from(JSON.stringify({ args: op.args, label: op.label })), `${user}|queue|${op.opId}`));
+    }
     db.exec("commit");
   } catch (err) {
     db.exec("rollback");
     throw err;
   }
   for (const t of touched) cache.delete(`${user}|${t}`);
+}
+
+/** File d'attente de ce compte, dans l'ordre où les actions ont été faites. */
+export function pendingOps(user: string): QueuedOp[] {
+  const rows = state().db.prepare("select seq, org, op_id, kind, occurred_at, data from queue where user_id = ? order by seq").all(user) as
+    Array<{ seq: number; org: string; op_id: string; kind: string; occurred_at: string; data: Uint8Array }>;
+  return rows.map((r) => {
+    const body = JSON.parse(decrypt(r.data, `${user}|queue|${r.op_id}`).toString("utf8")) as { args: Record<string, unknown>; label: string };
+    return { seq: r.seq, opId: r.op_id, user, org: r.org, kind: r.kind, occurredAt: r.occurred_at, args: body.args, label: body.label };
+  });
+}
+
+export function pendingCount(user: string): number {
+  return (state().db.prepare("select count(*) n from queue where user_id = ?").get(user) as { n: number }).n;
+}
+
+/** Retire une opération traitée, dans la même transaction que ce qu'elle a appris. */
+export function dropQueuedOp(user: string, seq: number, meta: Record<string, string>): void {
+  const { db } = state();
+  db.exec("begin immediate");
+  try {
+    db.prepare("delete from queue where user_id = ? and seq = ?").run(user, seq);
+    const setMeta = db.prepare("insert into meta (user_id, k, v) values (?, ?, ?) on conflict (user_id, k) do update set v = excluded.v");
+    for (const [k, v] of Object.entries(meta)) setMeta.run(user, k, encrypt(Buffer.from(v), `${user}|meta|${k}`));
+    db.exec("commit");
+  } catch (err) {
+    db.exec("rollback");
+    throw err;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Poste : identifiant et séries de numéros (communs à tous les comptes du poste)
+// -----------------------------------------------------------------------------
+export interface DeviceInfo {
+  series: string;
+  memberPrefix: string;
+  receiptPrefix: string;
+}
+
+export function deviceId(): string {
+  return (state().db.prepare("select v from store_info where k = 'device_id'").get() as { v: string }).v;
+}
+
+export function saveDevice(org: string, device: DeviceInfo): void {
+  state().db.prepare("insert into store_info (k, v) values (?, ?) on conflict (k) do update set v = excluded.v")
+    .run(`device:${org}`, JSON.stringify(device));
+}
+
+export function getDevice(org: string): DeviceInfo | null {
+  const row = state().db.prepare("select v from store_info where k = ?").get(`device:${org}`) as { v: string } | undefined;
+  return row ? (JSON.parse(row.v) as DeviceInfo) : null;
+}
+
+/** Numéro suivant de ce poste. Jamais réutilisé, même si l'action est refusée ensuite. */
+export function nextDeviceNumber(org: string, kind: "member" | "receipt"): number {
+  const { db } = state();
+  const k = `counter:${kind}:${org}`;
+  db.prepare("insert into store_info (k, v) values (?, '1') on conflict (k) do update set v = cast(cast(v as integer) + 1 as text)").run(k);
+  return Number((db.prepare("select v from store_info where k = ?").get(k) as { v: string }).v);
 }
 
 export function getMeta(user: string, k: string): string | null {
@@ -196,7 +279,7 @@ export function verifyAccount(email: string, password: string): OfflineLogin {
 /** Retire du poste tout ce qui concerne ce compte (accès supprimé). */
 export function forgetUser(user: string): void {
   const { db, cache } = state();
-  for (const sql of ["delete from rows where user_id = ?", "delete from meta where user_id = ?", "delete from accounts where user_id = ?"]) {
+  for (const sql of ["delete from rows where user_id = ?", "delete from meta where user_id = ?", "delete from accounts where user_id = ?", "delete from queue where user_id = ?"]) {
     db.prepare(sql).run(user);
   }
   for (const key of cache.keys()) if (key.startsWith(`${user}|`)) cache.delete(key);

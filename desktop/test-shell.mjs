@@ -6,9 +6,9 @@
  *
  * Un petit serveur local joue le rôle du CRM ; un test vérifie le vrai site.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -209,6 +209,26 @@ if (process.env.CASTLE_EXE) {
       ]);
       if (code === "toujours lancé") child.kill();
       assert(code !== "toujours lancé", `${option} : l'application a démarré`);
+    }
+  });
+  await test("arrêt brutal au premier lancement : le logiciel redémarre quand même", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "castle-crash-"));
+    const log = join(dir, "logs", "castle.log");
+    const pagesShown = () => (existsSync(log) ? readFileSync(log, "utf8").split("première page affichée").length - 1 : 0);
+    const start = () => spawn(exe, [`--user-data-dir=${dir}`], { stdio: "ignore" });
+    const killTree = (child) => spawnSync("taskkill", ["/PID", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+    const first = start();
+    await until(() => pagesShown() >= 1, "premier lancement sans page", 90_000);
+    killTree(first);
+    await sleep(1500);
+    const second = start();
+    try {
+      await until(() => pagesShown() >= 2, `second lancement bloqué : ${existsSync(log) ? readFileSync(log, "utf8").slice(-300) : ""}`, 90_000);
+      assert(!readFileSync(log, "utf8").includes("ÉCHEC"), "échec au démarrage");
+    } finally {
+      killTree(second);
+      await sleep(1000);
+      rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
     }
   });
   await test("démarre seul le CRM local et affiche la connexion Castle", async () => {
