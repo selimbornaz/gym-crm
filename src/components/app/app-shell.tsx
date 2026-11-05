@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { Bell, Building2, Check, LogOut, Menu, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -191,6 +191,7 @@ function ThemeMenu() {
 }
 
 function UserMenu({ userName, userEmail, role, signOutAction }: ShellProps) {
+  const [signingOut, startSignOut] = useTransition();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -205,13 +206,17 @@ function UserMenu({ userName, userEmail, role, signOutAction }: ShellProps) {
           <span className="mt-1 block">{t.roles[role]}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <form action={signOutAction}>
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full">
-              <LogOut aria-hidden /> Se déconnecter
-            </button>
-          </DropdownMenuItem>
-        </form>
+        {/* Pas de <form> ici : le menu se ferme au clic et retire le formulaire avant
+            son envoi. On appelle directement l'action serveur, qui redirige vers /login. */}
+        <DropdownMenuItem
+          disabled={signingOut}
+          onSelect={(event) => {
+            event.preventDefault();
+            startSignOut(() => signOutAction());
+          }}
+        >
+          <LogOut aria-hidden /> {signingOut ? "Déconnexion…" : "Se déconnecter"}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
