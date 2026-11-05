@@ -19,7 +19,7 @@ import { InitialsAvatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
 import type { StaffRole } from "@/lib/permissions";
-import { CastleLogo, CastleWordmark } from "./castle-logo";
+import { BrandLogo } from "./brand-logo";
 import { visibleSections } from "./nav-config";
 
 interface ShellProps {
@@ -42,14 +42,14 @@ export function AppShell(props: ShellProps) {
 
   return (
     <div className="flex min-h-screen">
-      {/* La navigation reste noire dans les deux thèmes (identité Castle). */}
-      <aside className="dark castle-rail no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r text-foreground [color-scheme:dark] lg:flex">
+      {/* La navigation reste noire dans les deux thèmes (identité Dopamine Fitness). */}
+      <aside className="dark brand-rail no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r text-foreground [color-scheme:dark] lg:flex">
         <Brand />
         <NavLinks sections={sections} />
       </aside>
 
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent className="dark castle-rail left-0 right-auto w-72 border-l-0 border-r text-foreground [color-scheme:dark] sm:max-w-xs">
+        <SheetContent className="dark brand-rail left-0 right-auto w-72 border-l-0 border-r text-foreground [color-scheme:dark] sm:max-w-xs">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <Brand />
           <NavLinks sections={sections} onNavigate={() => setMobileOpen(false)} />
@@ -87,13 +87,10 @@ export function AppShell(props: ShellProps) {
 
 function Brand() {
   return (
-    <div className="relative mb-3 flex h-20 items-center gap-3 px-4">
-      <CastleLogo className="h-12 drop-shadow-[0_4px_16px_rgb(232_38_42/0.35)]" />
-      <div className="min-w-0 leading-tight">
-        <CastleWordmark className="block text-[15px]" />
-        <p className="mt-1 truncate text-[10.5px] text-muted-foreground">{t.app.tagline}</p>
-      </div>
-      <span aria-hidden className="hairline-brand absolute inset-x-4 bottom-0" />
+    // Bandeau noir pur : le fond du logo s'y fond sans cadre visible.
+    <div className="relative mb-3 flex shrink-0 justify-center bg-black py-2">
+      <BrandLogo className="w-40" />
+      <span aria-hidden className="hairline-brand absolute inset-x-0 bottom-0" />
     </div>
   );
 }
@@ -117,12 +114,12 @@ function NavLinks({ sections, onNavigate }: { sections: ReturnType<typeof visibl
                     className={cn(
                       "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-all duration-300 ease-out",
                       active
-                        ? "bg-gradient-to-r from-brand/20 to-brand/[0.03] font-medium text-foreground ring-1 ring-inset ring-brand/25 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brand"
+                        ? "bg-brand-metal font-semibold text-primary-foreground shadow-[0_8px_24px_-10px_rgb(255_107_15/0.7),inset_0_1px_0_rgb(255_255_255/0.25)]"
                         : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
                     )}
                   >
                     <Icon
-                      className={cn("size-4 transition-colors duration-300 ease-out", active ? "text-brand" : "text-subtle-foreground group-hover:text-foreground")}
+                      className={cn("size-4 transition-colors duration-300 ease-out", active ? "text-primary-foreground" : "text-subtle-foreground group-hover:text-foreground")}
                       strokeWidth={1.75}
                       aria-hidden
                     />

@@ -11,9 +11,11 @@ export function LoginForm({ next }: { next?: string }) {
   const { state, onSubmit, pending } = useFormAction(signIn);
 
   return (
-    <Card>
+    <Card className="relative overflow-hidden shadow-float">
+      <span aria-hidden className="bg-brand-metal absolute inset-x-0 top-0 h-[3px]" />
       <CardHeader>
-        <CardTitle>Connexion</CardTitle>
+        <p className="text-eyebrow text-brand">Espace personnel</p>
+        <CardTitle className="font-display text-[26px] font-semibold uppercase leading-tight tracking-[0.02em]">Connexion</CardTitle>
         <CardDescription>Accès réservé au personnel de la salle.</CardDescription>
       </CardHeader>
       <CardContent>
