@@ -114,7 +114,7 @@ function NavLinks({ sections, onNavigate }: { sections: ReturnType<typeof visibl
                     className={cn(
                       "group relative flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-[13px] transition-all duration-300 ease-out",
                       active
-                        ? "bg-brand-metal font-semibold text-primary-foreground shadow-[0_8px_24px_-10px_rgb(255_107_15/0.7),inset_0_1px_0_rgb(255_255_255/0.25)]"
+                        ? "bg-brand-metal font-semibold text-primary-foreground shadow-[0_8px_24px_-10px_rgb(255_106_0/0.7),inset_0_1px_0_rgb(255_255_255/0.25)]"
                         : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
                     )}
                   >

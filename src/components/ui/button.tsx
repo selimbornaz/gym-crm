@@ -15,7 +15,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-brand-metal font-semibold text-primary-foreground shadow-[0_1px_2px_rgb(0_0_0/0.2),0_8px_24px_-10px_rgb(255_107_15/0.6),inset_0_1px_0_rgb(255_255_255/0.28)] hover:brightness-110 hover:shadow-[0_1px_2px_rgb(0_0_0/0.2),0_12px_32px_-10px_rgb(255_107_15/0.8),inset_0_1px_0_rgb(255_255_255/0.34)]",
+          "bg-brand-metal font-semibold text-primary-foreground shadow-[0_1px_2px_rgb(0_0_0/0.2),0_8px_24px_-10px_rgb(255_106_0/0.6),inset_0_1px_0_rgb(255_255_255/0.28)] hover:brightness-110 hover:shadow-[0_1px_2px_rgb(0_0_0/0.2),0_12px_32px_-10px_rgb(255_106_0/0.8),inset_0_1px_0_rgb(255_255_255/0.34)]",
         destructive: "bg-danger/10 text-danger ring-1 ring-inset ring-danger/20 hover:bg-danger/15 hover:ring-danger/30",
         outline:
           "border border-border bg-card text-foreground shadow-card hover:border-border-strong hover:bg-accent/60",

@@ -66,14 +66,14 @@ export function BentoCard({
       {hero && (
         <>
           <span aria-hidden className="bg-brand-metal absolute inset-x-0 top-0 h-[3px]" />
-          <span aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,rgb(255_107_15/0.16),transparent)]" />
+          <span aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,rgb(255_106_0/0.16),transparent)]" />
         </>
       )}
       <div className="relative flex items-center justify-between gap-3 px-5 pt-4">
         <span className="flex items-center gap-2">
           {Icon &&
             (hero ? (
-              <span className="bg-brand-metal flex size-6 items-center justify-center rounded-md text-primary-foreground shadow-[0_6px_16px_-6px_rgb(255_107_15/0.7)]">
+              <span className="bg-brand-metal flex size-6 items-center justify-center rounded-md text-primary-foreground shadow-[0_6px_16px_-6px_rgb(255_106_0/0.7)]">
                 <Icon className="size-3.5" strokeWidth={2} aria-hidden />
               </span>
             ) : (
@@ -106,13 +106,13 @@ export function Figure({ value, size = "lg" }: { value: string; size?: "xl" | "l
     <p
       className={cn(
         "text-figure leading-none text-foreground",
-        size === "xl" && "text-[40px]",
-        size === "lg" && "text-[28px]",
-        size === "md" && "text-[22px]",
+        size === "xl" && "text-[56px]",
+        size === "lg" && "text-[40px]",
+        size === "md" && "text-[32px]",
       )}
     >
       {main}
-      {unit && <span className="ml-1 text-[0.45em] font-medium tracking-normal text-muted-foreground">{unit.trim()}</span>}
+      {unit && <span className="ml-1.5 text-[0.42em] tracking-[0.06em] text-brand">{unit.trim()}</span>}
     </p>
   );
 }

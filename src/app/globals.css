@@ -6,13 +6,13 @@
 /* =============================================================================
  * Design system « Dopamine Fitness » : règle 60-30-10 du logo
  * -----------------------------------------------------------------------------
- *  60 % orange vif   #ff6b0f : couleur de marque dominante, partout où l'interface
+ *  Orange vif saturé #ff6a00 : couleur de marque dominante, partout où l'interface
  *                              porte une couleur (actions, navigation active,
  *                              chiffres clés, graphiques, focus, halos).
- *  30 % anthracite   #2c2f33 : fonds et surfaces de travail (cartes, tableaux).
- *  10 % noir mat     #121212 : navigation, écran de connexion, texte sur orange.
+ *  Noir              #050505 : fond de page ; surfaces en noir mat #111111.
+ *  Noir pur          #000000 : navigation et écran de connexion (fond du logo).
  *
- *  Texte sur orange : toujours noir mat (contraste 6,8:1, le blanc échoue à 2,9:1).
+ *  Texte sur orange : toujours noir (contraste ≥ 6,7:1, le blanc échoue à 2,9:1).
  *  Les statuts gardent leurs teintes, toujours translucides (bg-*-500/10) ;
  *  l'avertissement passe au jaune pour ne pas se confondre avec la marque.
  * ========================================================================== */
@@ -25,7 +25,7 @@
   --card-foreground: #1c1d20;
   --popover: #ffffff;
   --popover-foreground: #1c1d20;
-  --primary: #f25c05;             /* orange vif, version jour */
+  --primary: #ff6a00;             /* orange vif, version jour */
   --primary-foreground: #121212;  /* noir mat */
   --secondary: #ecebe8;
   --secondary-foreground: #1c1d20;
@@ -63,50 +63,50 @@
 }
 
 .dark {
-  --background: #232528;          /* anthracite */
-  --foreground: #f4f2ef;
-  --card: #2c2f33;
-  --card-foreground: #f4f2ef;
-  --popover: #31343a;
-  --popover-foreground: #f4f2ef;
-  --primary: #ff6b0f;             /* orange vif du logo */
-  --primary-foreground: #121212;  /* noir mat */
-  --secondary: #383b40;
-  --secondary-foreground: #f4f2ef;
-  --muted: #383b40;
-  --muted-foreground: #b6b3ae;
-  --subtle-foreground: #9b9893;
-  --accent: #383b40;
-  --accent-foreground: #f4f2ef;
-  --destructive: #ff7b72;
-  --border: #3b3e44;
-  --border-strong: #4c5057;
-  --input: #3b3e44;
-  --ring: #ff8a3d;
-  --brand: #ff8a3d;               /* orange éclairci : lisible en texte sur anthracite */
+  --background: #050505;          /* noir */
+  --foreground: #ffffff;
+  --card: #111111;                /* noir mat des surfaces */
+  --card-foreground: #ffffff;
+  --popover: #161616;
+  --popover-foreground: #ffffff;
+  --primary: #ff6a00;             /* orange vif saturé */
+  --primary-foreground: #0a0a0a;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #ffffff;
+  --muted: #1c1c1c;
+  --muted-foreground: #b8b8b8;
+  --subtle-foreground: #8f8f8f;
+  --accent: #1f1f1f;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4d4d;
+  --border: #242424;
+  --border-strong: #3a3a3a;
+  --input: #2a2a2a;
+  --ring: #ff7a1a;
+  --brand: #ff7a1a;               /* orange lumineux : lisible en texte sur noir */
 
-  --success: #34d399;
-  --warning: #f2c94c;
-  --danger: #ff7b72;
-  --info: #8fb3de;
+  --success: #2ee59d;
+  --warning: #ffd23f;
+  --danger: #ff4d4d;
+  --info: #4da3ff;
 
-  --chart-1: #ff6b0f;
-  --chart-2: #4b95dc;
-  --chart-3: #22b884;
-  --chart-grid: #35383d;
+  --chart-1: #ff6a00;
+  --chart-2: #3d9bff;
+  --chart-3: #2ee59d;
+  --chart-grid: #1f1f1f;
 
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.45);
-  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 18px 44px -18px rgb(255 107 15 / 0.35);
-  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.05);
-  --glow: rgb(255 107 15 / 0.14);
-  --ambient: rgb(255 107 15 / 0.09);
-  --highlight: rgb(255 255 255 / 0.05);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.6);
+  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 0 0 1px rgb(255 106 0 / 0.35), 0 18px 48px -16px rgb(255 106 0 / 0.45);
+  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.06);
+  --glow: rgb(255 106 0 / 0.20);
+  --ambient: rgb(255 106 0 / 0.14);
+  --highlight: rgb(255 255 255 / 0.06);
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-saira), var(--font-geist-sans), ui-sans-serif, sans-serif;
+  --font-display: var(--font-bebas), var(--font-barlow), ui-sans-serif, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -157,14 +157,13 @@
   }
   /* Les barres de défilement n'héritent pas des variables du thème de la zone. */
   .brand-rail nav {
-    scrollbar-color: #33363b transparent;
+    scrollbar-color: #2a2a2a transparent;
   }
   html.dark {
     color-scheme: dark;
   }
   body {
-    @apply bg-background font-sans text-[14px] leading-[1.5] tracking-[-0.006em] text-foreground antialiased;
-    font-feature-settings: "cv11", "ss01", "ss03";
+    @apply bg-background font-sans text-[14.5px] leading-[1.5] text-foreground antialiased;
     text-rendering: optimizeLegibility;
     /* Lueur orange très discrète en haut de page. */
     background-image: radial-gradient(70rem 26rem at 75% -8rem, var(--ambient), transparent 70%);
@@ -172,7 +171,7 @@
     background-attachment: fixed;
   }
   h1, h2, h3 {
-    @apply tracking-[-0.02em];
+    @apply tracking-[-0.005em];
   }
   ::selection {
     background: rgb(255 107 15 / 0.32);
@@ -193,24 +192,24 @@
 @layer utilities {
   /* Libellé « eyebrow » : petites capitales espacées pour les en-têtes de section. */
   .text-eyebrow {
-    @apply text-[11px] font-medium uppercase leading-none tracking-[0.08em] text-subtle-foreground;
+    @apply text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-subtle-foreground;
   }
   /* Noir mat de la navigation et du panneau de connexion, réchauffé en haut. */
   .brand-rail {
     background:
-      radial-gradient(28rem 18rem at 0% 0%, rgb(255 107 15 / 0.10), transparent 70%),
-      linear-gradient(180deg, #171411 0%, #121212 38%, #0e0e0e 100%);
-    box-shadow: inset -1px 0 0 rgb(255 107 15 / 0.12);
+      radial-gradient(28rem 20rem at 0% 0%, rgb(255 106 0 / 0.14), transparent 70%),
+      #000000;
+    box-shadow: inset -1px 0 0 rgb(255 106 0 / 0.28);
     --border: #26282c;
     --accent: #24262a;
   }
   /* Orange métallisé du logo (reflet clair en haut, orange vif, arête plus soutenue).
      Le texte posé dessus est noir mat : contraste ≥ 5,4:1 sur toute la plage. */
   .bg-brand-metal {
-    background: linear-gradient(160deg, #ffac5e 0%, #ff8124 30%, #ff6b0f 62%, #f05a06 100%);
+    background: linear-gradient(160deg, #ffa240 0%, #ff7a00 35%, #ff6a00 65%, #ff5a00 100%);
   }
   .text-brand-metal {
-    background: linear-gradient(180deg, #ffb46a 0%, #ff7a1f 50%, #f05a06 100%);
+    background: linear-gradient(180deg, #ffb35c 0%, #ff7a00 50%, #ff5a00 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -234,7 +233,7 @@
   }
   /* Chiffres alignés et resserrés pour les KPI. */
   .text-figure {
-    @apply font-semibold tabular-nums tracking-[-0.01em];
+    @apply font-normal tabular-nums tracking-[0.02em];
     font-family: var(--font-display);
   }
   /* Halo radial qui apparaît au survol d'une carte (le parent porte `group`). */
