@@ -1,4 +1,4 @@
-# Gym CRM — gestion de salle de sport
+# Dopamine Fitness — CRM de salle de sport
 
 Application web de gestion pour salles de sport : membres, abonnements, encaissements, présences, coachs, programmes, planning, rapports financiers, équipements, personnel et journal d'audit.
 Interface en français, montants en **dinars tunisiens (TND, 3 décimales)**, heures affichées en **Africa/Tunis**.

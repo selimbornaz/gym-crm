@@ -155,14 +155,14 @@ console.log("Fenêtre et sécurité");
   });
 
   console.log("\nCoupure et reprise de connexion");
-  await test("site injoignable : page d'attente Castle, puis retour automatique à la même page", async () => {
+  await test("site injoignable : page d'attente Dopamine Fitness, puis retour automatique à la même page", async () => {
     await app.evaluate(`location.href = '${CRM}/paiements'; 1`);
     await until(async () => (await app.page()).url === `${CRM}/paiements`, "page de départ");
     await stopServer(server);
     await app.evaluate("location.reload(); 1");
     await until(async () => (await app.page()).url.includes("offline.html"), "page d'attente absente");
     const text = await app.evaluate("document.body.innerText");
-    assert(text.includes("Castle redémarre"), text);
+    assert(text.includes("Dopamine Fitness redémarre"), text);
     const again = await fakeCrm(CRM_PORT);
     await until(async () => (await app.page()).url === `${CRM}/paiements`, "pas de retour automatique");
     await stopServer(again);
@@ -186,10 +186,10 @@ await test("démarrage sans Internet : page d'attente, Réessayer sans danger, p
 });
 
 console.log("\nVrai site");
-await test(`l'application affiche la connexion Castle de ${LIVE_HOST}`, async () => {
+await test(`l'application affiche la connexion Dopamine Fitness de ${LIVE_HOST}`, async () => {
   const app = launch({ crmUrl: `https://${LIVE_HOST}/` });
   try {
-    await until(async () => (await app.page())?.title === "Connexion · Castle", "page de connexion absente", 40_000);
+    await until(async () => (await app.page())?.title === "Connexion · Dopamine Fitness", "page de connexion absente", 40_000);
     assert((await app.page()).url.startsWith(`https://${LIVE_HOST}/login`), (await app.page()).url);
     await until(async () => /Se connecter/.test(await app.evaluate("document.body.innerText")), "formulaire de connexion absent");
   } finally {
@@ -231,7 +231,7 @@ if (process.env.CASTLE_EXE) {
       rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 300 });
     }
   });
-  await test("démarre seul le CRM local et affiche la connexion Castle", async () => {
+  await test("démarre seul le CRM local et affiche la connexion Dopamine Fitness", async () => {
     const child = spawn(exe, [], { stdio: "ignore" });
     const exited = new Promise((resolve) => child.on("exit", resolve));
     try {

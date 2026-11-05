@@ -148,7 +148,7 @@ await test("la synchronisation part de la page, avec le jeton de l'application",
 
 console.log("\nChaque écran avec de vraies données, hors ligne");
 const pages = [
-  ["/dashboard", "Castle"],
+  ["/dashboard", "Dopamine Fitness"],
   ["/attendance", "Présences"],
   ["/members", "Trabelsi"],
   [`/members/${seed.member}`, "Ben Salah"],

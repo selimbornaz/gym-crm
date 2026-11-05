@@ -1,5 +1,5 @@
 /**
- * Application de bureau Castle : le même CRM, servi localement par le processus
+ * Application de bureau Dopamine Fitness : le même CRM, servi localement par le processus
  * « server » et connecté à la même base Supabase. Sans Internet, il lit la copie
  * locale chiffrée. Aucune clé d'administration n'est embarquée : connexion, rôles
  * et règles restent ceux du site. La page reçoit les droits d'un site web ordinaire
@@ -10,6 +10,13 @@ const { createHash, randomBytes } = require("node:crypto");
 const { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } = require("node:fs");
 const path = require("node:path");
 const tcp = require("node:net");
+
+// Le nom affiché est devenu « Dopamine Fitness », mais les données locales (copie
+// chiffrée, clé, session) restent dans le dossier d'origine : rien n'est perdu.
+app.setName("Dopamine Fitness");
+if (!app.commandLine.hasSwitch("user-data-dir")) {
+  app.setPath("userData", path.join(app.getPath("appData"), "Castle CRM"));
+}
 
 // Sans ce refus, un autre programme pourrait piloter la fenêtre et lire les données.
 const DEBUG_SWITCHES = ["remote-debugging-port", "remote-debugging-pipe", "inspect", "inspect-brk"];
@@ -109,7 +116,7 @@ function startServer(port, dataKey) {
   const dir = app.isPackaged ? path.join(process.resourcesPath, "server") : path.join(__dirname, "server");
   serverProcess = utilityProcess.fork(path.join(__dirname, "server-entry.cjs"), [], {
     cwd: dir,
-    serviceName: "Castle CRM Server",
+    serviceName: "Dopamine Fitness Server",
     stdio: "pipe",
     env: {
       ...process.env,
@@ -205,8 +212,8 @@ function createWindow() {
     height: 860,
     minWidth: 800,
     minHeight: 600,
-    title: "Castle CRM",
-    backgroundColor: "#0a0808",
+    title: "Dopamine Fitness",
+    backgroundColor: "#000000",
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
@@ -370,7 +377,7 @@ if (!app.requestSingleInstanceLock()) {
         logLine("[démarrage] serveur prêt");
       } catch (err) {
         logLine(`[démarrage] ÉCHEC ${err.message}`);
-        dialog.showErrorBox("Castle CRM", `Démarrage impossible : ${err.message}.`);
+        dialog.showErrorBox("Dopamine Fitness", `Démarrage impossible : ${err.message}.`);
         app.quit();
         return;
       }

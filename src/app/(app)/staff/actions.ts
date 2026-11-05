@@ -32,7 +32,7 @@ export async function inviteStaff(_: ActionState, formData: FormData): Promise<A
 
   // Le logiciel de bureau n'embarque aucune clé d'administration.
   if (process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1") {
-    return { error: "Les invitations se font depuis le site web de Castle." };
+    return { error: "Les invitations se font depuis le site web de Dopamine Fitness." };
   }
   const admin = createAdminClient();
   const { data: existing } = await admin.from("profiles").select("id").eq("email", input.email).maybeSingle();

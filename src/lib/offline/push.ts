@@ -96,7 +96,7 @@ export type SyncOutcome =
  */
 export async function syncAll(client: RemoteClient, user: string, orgs: string[], pushed?: PushSummary): Promise<SyncOutcome> {
   const sent = pushed ?? (await pushQueue(client, user));
-  await registerDevice(client, orgs, "Castle CRM");
+  await registerDevice(client, orgs, "Dopamine Fitness");
   if (pendingCount(user) > 0) return { status: "pending", pushed: sent };
   return { status: "ok", pushed: sent, ...(await pullAll(client, user, orgs, sent.touchedOrgs)) };
 }

@@ -49,6 +49,7 @@ export function BentoCard({
   className,
   children,
   action,
+  hero = false,
 }: {
   title: string;
   icon?: LucideIcon;
@@ -57,13 +58,28 @@ export function BentoCard({
   className?: string;
   children: ReactNode;
   action?: ReactNode;
+  /** Carte principale : filet orange métallisé, halo orange, icône en pastille. */
+  hero?: boolean;
 }) {
   return (
-    <Card interactive className={cn("flex flex-col overflow-hidden", className)}>
-      <div className="flex items-center justify-between gap-3 px-5 pt-4">
+    <Card interactive className={cn("flex flex-col overflow-hidden", hero && "border-brand/25", className)}>
+      {hero && (
+        <>
+          <span aria-hidden className="bg-brand-metal absolute inset-x-0 top-0 h-[3px]" />
+          <span aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,rgb(255_106_0/0.16),transparent)]" />
+        </>
+      )}
+      <div className="relative flex items-center justify-between gap-3 px-5 pt-4">
         <span className="flex items-center gap-2">
-          {Icon && <Icon className="size-3.5 text-subtle-foreground" strokeWidth={1.75} aria-hidden />}
-          <span className="text-eyebrow">{title}</span>
+          {Icon &&
+            (hero ? (
+              <span className="bg-brand-metal flex size-6 items-center justify-center rounded-md text-primary-foreground shadow-[0_6px_16px_-6px_rgb(255_106_0/0.7)]">
+                <Icon className="size-3.5" strokeWidth={2} aria-hidden />
+              </span>
+            ) : (
+              <Icon className="size-3.5 text-brand" strokeWidth={1.75} aria-hidden />
+            ))}
+          <span className={cn("text-eyebrow", hero && "text-foreground/80")}>{title}</span>
         </span>
         {action}
         {href && !action && (
@@ -90,13 +106,13 @@ export function Figure({ value, size = "lg" }: { value: string; size?: "xl" | "l
     <p
       className={cn(
         "text-figure leading-none text-foreground",
-        size === "xl" && "text-[40px]",
-        size === "lg" && "text-[28px]",
-        size === "md" && "text-[22px]",
+        size === "xl" && "text-[56px]",
+        size === "lg" && "text-[40px]",
+        size === "md" && "text-[32px]",
       )}
     >
       {main}
-      {unit && <span className="ml-1 text-[0.45em] font-medium tracking-normal text-muted-foreground">{unit.trim()}</span>}
+      {unit && <span className="ml-1.5 text-[0.42em] tracking-[0.06em] text-brand">{unit.trim()}</span>}
     </p>
   );
 }

@@ -168,7 +168,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12">
         {/* Héros ------------------------------------------------------------- */}
         {financial ? (
-          <BentoCard title="Encaissé ce mois" icon={CircleDollarSign} href="/reports" linkLabel="Rapports" className="md:col-span-6 lg:col-span-8 lg:row-span-2">
+          <BentoCard hero title="Encaissé ce mois" icon={CircleDollarSign} href="/reports" linkLabel="Rapports" className="md:col-span-6 lg:col-span-8 lg:row-span-2">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div className="flex flex-col gap-2">
                 <Figure value={formatMoney(revenueMtd)} size="xl" />
@@ -191,7 +191,7 @@ export default async function DashboardPage() {
             <p className="mt-2 text-[11px] text-subtle-foreground">Encaissements nets par jour, 30 derniers jours · paiements reçus moins remboursements</p>
           </BentoCard>
         ) : (
-          <BentoCard title="Membres actifs" icon={UserCheck} href="/members?status=active" className="md:col-span-6 lg:col-span-8 lg:row-span-2">
+          <BentoCard hero title="Membres actifs" icon={UserCheck} href="/members?status=active" className="md:col-span-6 lg:col-span-8 lg:row-span-2">
             <div className="flex flex-col gap-2">
               <Figure value={activeNow.toLocaleString("fr-FR")} size="xl" />
               <TrendPill ratio={ratio(activeNow, activePrev)} caption="vs fin du mois dernier" />

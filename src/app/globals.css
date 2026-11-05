@@ -4,104 +4,109 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
- * Design system « Castle » : noir profond et rouge du logo
+ * Design system « Dopamine Fitness » : règle 60-30-10 du logo
  * -----------------------------------------------------------------------------
- *  Dark (défaut) : fond #0a0808 · surfaces #141111 · bordures #2a2323
- *  Light         : fond #f8f6f5 · surfaces #ffffff · bordures #e7e1df
- *  Texte  : ivoire chaud / noir chaud, jamais de blanc ni de gris froids
- *  Accent : rouge du logo #e8262a (actions, focus, navigation active) ; les
- *           statuts gardent leurs teintes, toujours translucides (bg-*-500/10).
+ *  Orange vif saturé #ff6a00 : couleur de marque dominante, partout où l'interface
+ *                              porte une couleur (actions, navigation active,
+ *                              chiffres clés, graphiques, focus, halos).
+ *  Noir              #050505 : fond de page ; surfaces en noir mat #111111.
+ *  Noir pur          #000000 : navigation et écran de connexion (fond du logo).
+ *
+ *  Texte sur orange : toujours noir (contraste ≥ 6,7:1, le blanc échoue à 2,9:1).
+ *  Les statuts gardent leurs teintes, toujours translucides (bg-*-500/10) ;
+ *  l'avertissement passe au jaune pour ne pas se confondre avec la marque.
  * ========================================================================== */
 :root {
   --radius: 0.75rem;
 
-  --background: #f8f6f5;
-  --foreground: #171212;
+  --background: #f5f4f2;
+  --foreground: #1c1d20;          /* anthracite très sombre */
   --card: #ffffff;
-  --card-foreground: #171212;
+  --card-foreground: #1c1d20;
   --popover: #ffffff;
-  --popover-foreground: #171212;
-  --primary: #d81f26;
-  --primary-foreground: #ffffff;
-  --secondary: #f1eded;
-  --secondary-foreground: #171212;
-  --muted: #f1eded;
-  --muted-foreground: #6f6663;
-  --subtle-foreground: #857b78;   /* métadonnées tertiaires */
-  --accent: #f1eded;
-  --accent-foreground: #171212;
+  --popover-foreground: #1c1d20;
+  --primary: #ff6a00;             /* orange vif, version jour */
+  --primary-foreground: #121212;  /* noir mat */
+  --secondary: #ecebe8;
+  --secondary-foreground: #1c1d20;
+  --muted: #ecebe8;
+  --muted-foreground: #5f6166;
+  --subtle-foreground: #75777c;   /* métadonnées tertiaires */
+  --accent: #ecebe8;
+  --accent-foreground: #1c1d20;
   --destructive: #c81e1e;
-  --border: #e7e1df;
-  --border-strong: #d6cecb;       /* survol */
-  --input: #e7e1df;
-  --ring: #d81f26;
-  --brand: #d81f26;
+  --border: #e2e0dc;
+  --border-strong: #cfccc7;       /* survol */
+  --input: #e2e0dc;
+  --ring: #f25c05;
+  --brand: #c2410c;               /* orange foncé : lisible en texte sur blanc */
 
   /* Statuts (texte lisible sur fond translucide) */
   --success: #047857;
-  --warning: #b45309;
+  --warning: #a16207;
   --danger: #c81e1e;
   --info: #2f6299;
 
   /* Graphiques (palette validée daltonisme, ordre fixe) */
-  --chart-1: #d81f26;
+  --chart-1: #f25c05;
   --chart-2: #2f74b8;
-  --chart-3: #b07d12;
-  --chart-grid: #f0ecea;
+  --chart-3: #138a62;
+  --chart-grid: #eeece9;
 
   /* Ombres douces et diffuses (cartes « bento ») */
-  --shadow-card: 0 1px 2px rgb(23 18 18 / 0.05), 0 1px 1px rgb(23 18 18 / 0.02);
-  --shadow-card-hover: 0 1px 2px rgb(23 18 18 / 0.05), 0 14px 34px -12px rgb(216 31 38 / 0.16);
-  --shadow-float: 0 16px 48px -16px rgb(23 18 18 / 0.24), 0 2px 6px rgb(23 18 18 / 0.06);
-  --glow: rgb(216 31 38 / 0.08);
-  --ambient: rgb(216 31 38 / 0.05);
+  --shadow-card: 0 1px 2px rgb(28 29 32 / 0.06), 0 1px 1px rgb(28 29 32 / 0.02);
+  --shadow-card-hover: 0 1px 2px rgb(28 29 32 / 0.06), 0 14px 34px -12px rgb(242 92 5 / 0.22);
+  --shadow-float: 0 16px 48px -16px rgb(28 29 32 / 0.26), 0 2px 6px rgb(28 29 32 / 0.06);
+  --glow: rgb(242 92 5 / 0.10);
+  --ambient: rgb(242 92 5 / 0.07);
   --highlight: rgb(255 255 255 / 0);
 }
 
 .dark {
-  --background: #0a0808;
-  --foreground: #f7f3f1;          /* ivoire */
-  --card: #141111;
-  --card-foreground: #f7f3f1;
-  --popover: #181414;
-  --popover-foreground: #f7f3f1;
-  --primary: #e8262a;             /* rouge du logo */
-  --primary-foreground: #ffffff;
-  --secondary: #211b1b;
-  --secondary-foreground: #f7f3f1;
-  --muted: #211b1b;
-  --muted-foreground: #a89f9c;
-  --subtle-foreground: #8a7f7c;
-  --accent: #211b1b;
-  --accent-foreground: #f7f3f1;
-  --destructive: #ff7b72;
-  --border: #2a2323;
-  --border-strong: #3d3232;
-  --input: #2a2323;
-  --ring: #ff4a4d;
-  --brand: #ff4a4d;               /* rouge éclairci : lisible en texte sur noir */
+  --background: #050505;          /* noir */
+  --foreground: #ffffff;
+  --card: #111111;                /* noir mat des surfaces */
+  --card-foreground: #ffffff;
+  --popover: #161616;
+  --popover-foreground: #ffffff;
+  --primary: #ff6a00;             /* orange vif saturé */
+  --primary-foreground: #0a0a0a;
+  --secondary: #1c1c1c;
+  --secondary-foreground: #ffffff;
+  --muted: #1c1c1c;
+  --muted-foreground: #b8b8b8;
+  --subtle-foreground: #8f8f8f;
+  --accent: #1f1f1f;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4d4d;
+  --border: #242424;
+  --border-strong: #3a3a3a;
+  --input: #2a2a2a;
+  --ring: #ff7a1a;
+  --brand: #ff7a1a;               /* orange lumineux : lisible en texte sur noir */
 
-  --success: #34d399;
-  --warning: #e6b450;
-  --danger: #ff7b72;
-  --info: #8fb3de;
+  --success: #2ee59d;
+  --warning: #ffd23f;
+  --danger: #ff4d4d;
+  --info: #4da3ff;
 
-  --chart-1: #e8262a;
-  --chart-2: #3f8bd4;
-  --chart-3: #b07d12;
-  --chart-grid: #241e1e;
+  --chart-1: #ff6a00;
+  --chart-2: #3d9bff;
+  --chart-3: #2ee59d;
+  --chart-grid: #1f1f1f;
 
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 18px 44px -18px rgb(232 38 42 / 0.28);
-  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(255 255 255 / 0.04);
-  --glow: rgb(232 38 42 / 0.14);
-  --ambient: rgb(232 38 42 / 0.09);
-  --highlight: rgb(255 255 255 / 0.05);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.6);
+  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 0 0 1px rgb(255 106 0 / 0.35), 0 18px 48px -16px rgb(255 106 0 / 0.45);
+  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.06);
+  --glow: rgb(255 106 0 / 0.20);
+  --ambient: rgb(255 106 0 / 0.14);
+  --highlight: rgb(255 255 255 / 0.06);
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-display: var(--font-bebas), var(--font-barlow), ui-sans-serif, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -151,30 +156,29 @@
     scrollbar-color: var(--border-strong) transparent;
   }
   /* Les barres de défilement n'héritent pas des variables du thème de la zone. */
-  .castle-rail nav {
-    scrollbar-color: #3d3232 transparent;
+  .brand-rail nav {
+    scrollbar-color: #2a2a2a transparent;
   }
   html.dark {
     color-scheme: dark;
   }
   body {
-    @apply bg-background font-sans text-[14px] leading-[1.5] tracking-[-0.006em] text-foreground antialiased;
-    font-feature-settings: "cv11", "ss01", "ss03";
+    @apply bg-background font-sans text-[14.5px] leading-[1.5] text-foreground antialiased;
     text-rendering: optimizeLegibility;
-    /* Lueur rouge très discrète en haut de page. */
+    /* Lueur orange très discrète en haut de page. */
     background-image: radial-gradient(70rem 26rem at 75% -8rem, var(--ambient), transparent 70%);
     background-repeat: no-repeat;
     background-attachment: fixed;
   }
   h1, h2, h3 {
-    @apply tracking-[-0.02em];
+    @apply tracking-[-0.005em];
   }
   ::selection {
-    background: rgb(232 38 42 / 0.3);
+    background: rgb(255 107 15 / 0.32);
   }
   input[type="checkbox"],
   input[type="radio"] {
-    accent-color: var(--brand);
+    accent-color: var(--primary);
   }
   /* Respect des préférences d'accessibilité : pas d'animation forcée. */
   @media (prefers-reduced-motion: reduce) {
@@ -188,39 +192,49 @@
 @layer utilities {
   /* Libellé « eyebrow » : petites capitales espacées pour les en-têtes de section. */
   .text-eyebrow {
-    @apply text-[11px] font-medium uppercase leading-none tracking-[0.08em] text-subtle-foreground;
+    @apply text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-subtle-foreground;
   }
-  /* Logo de connexion : apparition douce, puis lente respiration lumineuse. */
-  .logo-breathe {
-    animation:
-      castle-logo-in 900ms var(--ease-out-soft) both,
-      castle-logo-breathe 6s ease-in-out 900ms infinite;
+  /* Noir mat de la navigation et du panneau de connexion, réchauffé en haut. */
+  .brand-rail {
+    background:
+      radial-gradient(28rem 20rem at 0% 0%, rgb(255 106 0 / 0.14), transparent 70%),
+      #000000;
+    box-shadow: inset -1px 0 0 rgb(255 106 0 / 0.28);
+    --border: #26282c;
+    --accent: #24262a;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .logo-breathe {
-      animation: none;
-      filter: drop-shadow(0 12px 48px rgb(232 38 42 / 0.35));
-    }
+  /* Orange métallisé du logo (reflet clair en haut, orange vif, arête plus soutenue).
+     Le texte posé dessus est noir mat : contraste ≥ 5,4:1 sur toute la plage. */
+  .bg-brand-metal {
+    background: linear-gradient(160deg, #ffa240 0%, #ff7a00 35%, #ff6a00 65%, #ff5a00 100%);
   }
-  /* Fond noir de la navigation et du panneau de connexion, réchauffé en haut. */
-  .castle-rail {
-    background: linear-gradient(180deg, #170d0d 0%, #0a0707 38%, #060404 100%);
+  .text-brand-metal {
+    background: linear-gradient(180deg, #ffb35c 0%, #ff7a00 50%, #ff5a00 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
-  /* Filet rouge qui s'estompe aux extrémités. */
+  /* Titres et chiffres en police d'affichage. */
+  .font-display {
+    font-family: var(--font-display);
+    font-feature-settings: normal;
+  }
+  /* Filet orange qui s'estompe aux extrémités. */
   .hairline-brand {
     display: block;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(232 38 42 / 0.75), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 107 15 / 0.85), transparent);
   }
-  /* Trame d'hexagones reprenant la géométrie du logo, estompée vers les bords. */
-  .hex-pattern {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-opacity='0.05'/%3E%3C/svg%3E");
-    -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent);
-    mask-image: radial-gradient(closest-side, #000 35%, transparent);
+  /* Fines rayures obliques (vitesse, effort), estompées vers les bords. */
+  .brand-stripes {
+    background-image: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 14px);
+    -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent);
+    mask-image: radial-gradient(closest-side, #000 30%, transparent);
   }
   /* Chiffres alignés et resserrés pour les KPI. */
   .text-figure {
-    @apply font-semibold tabular-nums tracking-[-0.03em];
+    @apply font-normal tabular-nums tracking-[0.02em];
+    font-family: var(--font-display);
   }
   /* Halo radial qui apparaît au survol d'une carte (le parent porte `group`). */
   .glow-on-hover {
@@ -241,7 +255,7 @@
     inset: -1px;
     padding: 1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgb(232 38 42 / 0.8), rgb(232 38 42 / 0) 45%, rgb(232 38 42 / 0.35));
+    background: linear-gradient(135deg, rgb(255 107 15 / 0.9), rgb(255 107 15 / 0) 45%, rgb(255 107 15 / 0.4));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -253,29 +267,6 @@
   .gradient-border:focus-visible::before,
   .gradient-border[data-active="true"]::before {
     opacity: 1;
-  }
-}
-
-@keyframes castle-logo-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.96);
-    filter: drop-shadow(0 12px 24px rgb(232 38 42 / 0));
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: drop-shadow(0 12px 48px rgb(232 38 42 / 0.3));
-  }
-}
-@keyframes castle-logo-breathe {
-  0%, 100% {
-    transform: translateY(0);
-    filter: drop-shadow(0 12px 48px rgb(232 38 42 / 0.3));
-  }
-  50% {
-    transform: translateY(-6px);
-    filter: drop-shadow(0 18px 64px rgb(232 38 42 / 0.55));
   }
 }
 

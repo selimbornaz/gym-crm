@@ -1,10 +1,10 @@
 {
   "name": "castle-crm-desktop",
-  "productName": "Castle CRM",
-  "version": "0.3.2",
+  "productName": "Dopamine Fitness",
+  "version": "0.4.0",
   "private": true,
-  "description": "Application de bureau de Castle : le même CRM que la version en ligne.",
-  "author": "Castle",
+  "description": "Application de bureau de Dopamine Fitness : le même CRM que la version en ligne.",
+  "author": "Dopamine Fitness",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
@@ -19,8 +19,8 @@
   },
   "build": {
     "appId": "tn.castle.crm",
-    "productName": "Castle CRM",
-    "artifactName": "Castle-CRM-Setup-${version}.${ext}",
+    "productName": "Dopamine Fitness",
+    "artifactName": "Dopamine-Fitness-Setup-${version}.${ext}",
     "npmRebuild": false,
     "directories": { "output": "dist", "buildResources": "build" },
     "files": ["main.cjs", "offline.html", "splash.html", "server-entry.cjs"],
@@ -40,7 +40,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Castle CRM",
+      "shortcutName": "Dopamine Fitness",
       "installerLanguages": ["fr_FR"],
       "language": "1036"
     }

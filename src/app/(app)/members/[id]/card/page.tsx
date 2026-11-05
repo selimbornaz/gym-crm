@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
-import { CastleLogo } from "@/components/app/castle-logo";
+import { BrandLogo } from "@/components/app/brand-logo";
 import { PrintButton } from "@/components/app/print-button";
 import { requirePagePermission } from "@/lib/auth/context";
 import { formatDate } from "@/lib/format";
@@ -34,7 +34,7 @@ export default async function MemberCardPage({ params }: { params: Promise<{ id:
         <div className="size-28 shrink-0" dangerouslySetInnerHTML={{ __html: qrSvg }} aria-label={`QR code ${member.member_code}`} role="img" />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <CastleLogo className="h-7" />
+            <BrandLogo className="w-10 rounded-md" />
             <p className="truncate text-xs uppercase tracking-wider text-zinc-500">{ctx.org.name}</p>
           </div>
           <p className="mt-2 text-lg font-semibold leading-tight">
