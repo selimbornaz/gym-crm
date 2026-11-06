@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Clock3, Loader2, ScanLine, Search, ShieldAlert, ShieldCheck, XCircle } from "lucide-react";
+import { Camera, CameraOff, CheckCircle2, Clock3, Loader2, ScanLine, Search, ShieldAlert, ShieldCheck, XCircle } from "lucide-react";
 import { MembershipBadge } from "@/components/app/status-badge";
 import { InitialsAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,13 @@ export function CheckInDesk({ preselected }: { preselected?: CheckInCandidate | 
   const [state, dispatch, pending] = useActionState(checkInMember, {});
   const [overrideFor, setOverrideFor] = useState<string | null>(null);
   const codeInput = useRef<HTMLInputElement>(null);
+  const [cameraSupported, setCameraSupported] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
   const outcome = state.data as CheckInOutcome | undefined;
+
+  useEffect(() => {
+    setCameraSupported(!!navigator.mediaDevices?.getUserMedia);
+  }, []);
 
   // Recherche avec anti-rebond (300 ms).
   useEffect(() => {
@@ -62,25 +68,52 @@ export function CheckInDesk({ preselected }: { preselected?: CheckInCandidate | 
             if (codeInput.current) codeInput.current.value = "";
           }}
         >
-          <Label htmlFor="member_code" className="text-eyebrow">N° membre ou QR code</Label>
+          <Label htmlFor="member_code" className="text-eyebrow">Code à 4 chiffres, n° membre ou QR code</Label>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <ScanLine className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-subtle-foreground" strokeWidth={1.5} aria-hidden />
               <Input
                 id="member_code"
                 ref={codeInput}
-                placeholder="Scannez une carte ou tapez M-000123"
+                placeholder="Code (ex. 7392), M-000123 ou scan"
                 autoComplete="off"
                 autoFocus
                 className="h-12 pl-11 pr-14 font-mono text-[15px] tracking-[0.02em]"
+                onChange={(e) => {
+                  // Code d'entrée complet : envoyé aussitôt, sans appuyer sur Entrée.
+                  const value = e.currentTarget.value.trim();
+                  if (/^\d{4}$/.test(value)) {
+                    submit({ member_code: value, method: "pin" });
+                    e.currentTarget.value = "";
+                  }
+                }}
               />
               <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-md border bg-secondary px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted-foreground">
                 Entrée
               </kbd>
             </div>
-            <CameraScanner onCode={(code) => submit({ member_code: code, method: "qr" })} />
+            {cameraSupported && (
+              <Button
+                type="button"
+                variant={cameraOn ? "default" : "outline"}
+                size="icon"
+                className="size-12"
+                onClick={() => setCameraOn((on) => !on)}
+                aria-pressed={cameraOn}
+                aria-label={cameraOn ? "Arrêter la caméra" : "Scanner avec la caméra"}
+              >
+                {cameraOn ? <CameraOff /> : <Camera />}
+              </Button>
+            )}
           </div>
         </form>
+
+        {cameraOn && (
+          <CameraScanner
+            onCode={(code) => submit({ member_code: code, method: "qr" })}
+            onClose={() => setCameraOn(false)}
+          />
+        )}
 
         <div className="my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.08em] text-subtle-foreground">
           <span className="h-px flex-1 bg-border" /> ou <span className="h-px flex-1 bg-border" />
@@ -145,7 +178,7 @@ export function CheckInDesk({ preselected }: { preselected?: CheckInCandidate | 
               <ScanLine className="size-5 text-subtle-foreground" strokeWidth={1.5} aria-hidden />
             </span>
             <p className="text-[13px] font-medium">Prêt à scanner</p>
-            <p className="max-w-64 text-[12px] text-muted-foreground">Scannez une carte membre ou recherchez un nom pour enregistrer l&apos;entrée.</p>
+            <p className="max-w-64 text-[12px] text-muted-foreground">Tapez le code à 4 chiffres, scannez le QR code du membre ou recherchez son nom.</p>
           </div>
         )}
       </div>
@@ -248,66 +281,115 @@ function Verdict({
   );
 }
 
-/** Scan caméra si l'API BarcodeDetector existe (Chrome/Edge Android, desktop récents). */
-function CameraScanner({ onCode }: { onCode: (code: string) => void }) {
-  const [supported, setSupported] = useState(false);
-  const [open, setOpen] = useState(false);
+/** Délai pendant lequel un même QR code n'est pas relu (le membre range son téléphone). */
+const SAME_CODE_PAUSE_MS = 6000;
+/** Délai minimal entre deux lectures, le temps d'afficher le verdict. */
+const BETWEEN_SCANS_MS = 2500;
+
+/**
+ * Caméra de l'accueil, en continu : le membre présente le QR code de son
+ * téléphone (ou sa carte), l'entrée est envoyée aussitôt, puis la caméra reste
+ * prête pour le suivant. Lecture native (BarcodeDetector) quand le navigateur
+ * la propose, sinon décodage jsQR (Chrome/Edge sous Windows n'ont pas l'API native).
+ */
+function CameraScanner({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
+  const [status, setStatus] = useState<"starting" | "ready" | "read" | "error">("starting");
   // Référence stable : le flux caméra ne redémarre pas à chaque rendu du parent.
   const onCodeRef = useRef(onCode);
   onCodeRef.current = onCode;
 
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "BarcodeDetector" in window && !!navigator.mediaDevices?.getUserMedia);
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
     let stream: MediaStream | null = null;
-    let raf = 0;
+    let timer = 0;
     let stopped = false;
+    let last = { code: "", at: 0 };
+
     (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        if (!video.current || stopped) return;
-        video.current.srcObject = stream;
-        await video.current.play();
-        // @ts-expect-error BarcodeDetector n'est pas encore dans les types DOM standard
-        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-        const tick = async () => {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } } });
+        const el = video.current;
+        if (!el || stopped) return;
+        el.srcObject = stream;
+        await el.play();
+        setStatus("ready");
+
+        const decode = await createDecoder();
+        const loop = async () => {
           if (stopped || !video.current) return;
-          const codes: Array<{ rawValue: string }> = await detector.detect(video.current).catch(() => []);
-          if (codes[0]?.rawValue) {
-            setOpen(false);
-            onCodeRef.current(codes[0].rawValue);
-            return;
+          const code = await decode(video.current).catch(() => null);
+          const now = Date.now();
+          if (code && now - last.at > BETWEEN_SCANS_MS && !(code === last.code && now - last.at < SAME_CODE_PAUSE_MS)) {
+            last = { code, at: now };
+            setStatus("read");
+            onCodeRef.current(code);
+            window.setTimeout(() => !stopped && setStatus("ready"), 1200);
           }
-          raf = requestAnimationFrame(tick);
+          timer = window.setTimeout(loop, 160);
         };
-        raf = requestAnimationFrame(tick);
+        loop();
       } catch {
-        setOpen(false);
+        if (!stopped) setStatus("error");
       }
     })();
+
     return () => {
       stopped = true;
-      cancelAnimationFrame(raf);
+      window.clearTimeout(timer);
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [open]);
+  }, []);
 
-  if (!supported) return null;
   return (
-    <>
-      <Button type="button" variant="outline" size="icon" className="size-12" onClick={() => setOpen((o) => !o)} aria-label="Scanner avec la caméra">
-        <ScanLine />
-      </Button>
-      {open && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-zinc-950/80 p-4 backdrop-blur-sm" role="dialog" aria-label="Scan QR">
-          <video ref={video} className="w-full max-w-sm rounded-2xl ring-1 ring-white/10" muted playsInline />
-          <Button variant="secondary" onClick={() => setOpen(false)}>Fermer</Button>
-        </div>
-      )}
-    </>
+    <div className="mt-4 grid gap-2">
+      <div
+        className={cn(
+          "relative aspect-video overflow-hidden rounded-xl bg-black ring-2 transition-all duration-300 ease-out",
+          status === "read" ? "ring-emerald-500" : "ring-border",
+        )}
+      >
+        <video ref={video} className="size-full object-cover" muted playsInline aria-label="Caméra de l'accueil" />
+        <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 size-40 -translate-x-1/2 -translate-y-1/2 rounded-2xl border-2 border-white/70 shadow-[0_0_0_9999px_rgb(0_0_0/0.35)]" />
+        {status === "starting" && (
+          <span className="absolute inset-0 flex items-center justify-center gap-2 text-[13px] text-white/80">
+            <Loader2 className="size-4 animate-spin" aria-hidden /> Ouverture de la caméra…
+          </span>
+        )}
+        {status === "error" && (
+          <span className="absolute inset-0 flex items-center justify-center p-6 text-center text-[13px] text-white/90">
+            Caméra indisponible : autorisez l&apos;accès à la caméra dans le navigateur, ou branchez une webcam.
+          </span>
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[12px] text-muted-foreground" aria-live="polite">
+          {status === "read" ? "QR code lu ✓" : "Le membre présente le QR code de son téléphone devant la caméra."}
+        </p>
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>Arrêter</Button>
+      </div>
+    </div>
   );
+}
+
+type Decode = (video: HTMLVideoElement) => Promise<string | null>;
+
+async function createDecoder(): Promise<Decode> {
+  if ("BarcodeDetector" in window) {
+    // @ts-expect-error BarcodeDetector n'est pas encore dans les types DOM standard
+    const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    return async (v) => ((await detector.detect(v)) as Array<{ rawValue: string }>)[0]?.rawValue || null;
+  }
+  const jsQR = (await import("jsqr")).default;
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  return async (v) => {
+    if (!context || !v.videoWidth) return null;
+    // Image réduite : décodage rapide sans charger le processeur de l'accueil.
+    const scale = Math.min(1, 640 / v.videoWidth);
+    canvas.width = Math.round(v.videoWidth * scale);
+    canvas.height = Math.round(v.videoHeight * scale);
+    context.drawImage(v, 0, 0, canvas.width, canvas.height);
+    const image = context.getImageData(0, 0, canvas.width, canvas.height);
+    return jsQR(image.data, image.width, image.height, { inversionAttempts: "dontInvert" })?.data || null;
+  };
 }

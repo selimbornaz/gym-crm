@@ -73,7 +73,7 @@ export const fr = {
     walk_in: "Passage à l'accueil", website: "Site web", social_media: "Réseaux sociaux", referral: "Parrainage", other: "Autre",
   },
 
-  checkinMethod: { search: "Recherche", member_code: "N° membre", qr: "QR code", manual: "Manuel" },
+  checkinMethod: { search: "Recherche", member_code: "N° membre", qr: "QR code", manual: "Manuel", pin: "Code 4 chiffres" },
 
   sessionKind: { group_class: "Cours collectif", personal_training: "Coaching individuel" },
   sessionStatus: { scheduled: "Programmée", cancelled: "Annulée", completed: "Terminée" },
