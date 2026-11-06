@@ -557,6 +557,10 @@ export const TABLE_COLUMNS: Record<string, ColumnDefault[]> = {
     {
       "name": "row_version",
       "value": 1
+    },
+    {
+      "name": "checkin_pin",
+      "value": null
     }
   ],
   "membership_plans": [

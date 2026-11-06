@@ -39,9 +39,12 @@ function membershipStatus(archivedAt: unknown, suspended: unknown, end: string |
 
 const indexById = (rows: Row[]) => new Map(rows.map((r) => [r.id, r]));
 
-/** Les vues ont été créées avant row_version : elles n'exposent pas cette colonne. */
+/**
+ * Les vues ont été créées avant row_version et checkin_pin (`m.*` est figé à la
+ * création de la vue) : elles n'exposent pas ces colonnes.
+ */
 function withoutVersion(row: Row): Row {
-  const { row_version: _version, ...rest } = row;
+  const { row_version: _version, checkin_pin: _pin, ...rest } = row;
   return rest;
 }
 

@@ -719,10 +719,12 @@ async function main() {
     const seen = made.map(([table, id]) => ({ table, id, row: { ...rowsOf(owner, table).find((r) => r.id === id)! } }));
     const out = await flush(owner);
     assert(out.pushed.rejected === 0 && out.pushed.conflicts === 0, JSON.stringify(out.pushed));
-    const ignore = new Set(["created_at", "updated_at", "row_version", "_offline", "last_activity_at"]);
+    // checkin_pin : attribué par le serveur au rejeu (un poste ne peut pas garantir l'unicité).
+    const ignore = new Set(["created_at", "updated_at", "row_version", "_offline", "last_activity_at", "checkin_pin"]);
     for (const { table, id, row } of seen) {
       const srv = await serverRow(table, id);
       assert(srv, table + " absent du serveur");
+      if (table === "members") assert(/^[0-9]{4}$/.test(String(srv.checkin_pin)), "code d'entrée non attribué au rejeu");
       assertSame(
         Object.fromEntries(Object.entries(row).filter(([k]) => !ignore.has(k))),
         Object.fromEntries(Object.entries(srv).filter(([k]) => !ignore.has(k))),
