@@ -543,6 +543,76 @@ async function main() {
     assert(r.length > 0 && r.every((x) => x.recipient_user_id === users.receptionA), "fuite");
   });
 
+  console.log("\nChatbot");
+  let convA = "";
+  await test("connexion d'un compte : propriétaire seulement, jeton illisible par l'API", async () => {
+    await expectError(as(db, users.receptionA, () => db.query(
+      "select chatbot_connect_account($1,'whatsapp','123456789','Salle A','EAAtoken-de-test-assez-long')", [orgA])), /non autorisée/);
+    await asCommit(db, users.ownerA, async () => {
+      await db.query("select chatbot_connect_account($1,'whatsapp','123456789','Salle A','EAAtoken-de-test-assez-long')", [orgA]);
+      const acc = await rows(db, "select channel, external_id from chat_channel_accounts");
+      assert(acc.length === 1, JSON.stringify(acc));
+    });
+    await expectError(as(db, users.ownerA, () => db.query("select * from private.chat_channel_secrets")), /permission denied/);
+    await expectError(as(db, users.ownerA, () => db.query("select chatbot_account_token(id) from chat_channel_accounts")), /permission denied/);
+    await expectError(as(db, users.ownerB, () => db.query(
+      "select chatbot_connect_account($1,'whatsapp','123456789','Vol','EAAautre-salle-jeton-long')", [orgB])), /autre salle/);
+  });
+  await test("boîte de réception : propriétaire et accueil oui, coach et autre salle non", async () => {
+    // Le webhook écrit en service_role : ici, en administrateur.
+    convA = (await one<{ id: string }>(db,
+      "insert into chat_conversations (organization_id, channel, external_user_id, contact_name) values ($1,'whatsapp','21622000111','Client WA') returning id", [orgA])).id;
+    await db.query("insert into chat_messages (organization_id, conversation_id, sender, body) values ($1,$2,'contact','Bonjour, vos prix ?')", [orgA, convA]);
+    for (const u of [users.ownerA, users.receptionA]) {
+      const r = await as(db, u, () => rows(db, "select id from chat_messages"));
+      assert(r.length === 1, `${u} : ${r.length}`);
+    }
+    for (const u of [users.coachA, users.ownerB]) {
+      const r = await as(db, u, () => rows(db, "select id from chat_conversations"));
+      assert(r.length === 0, "fuite vers " + u);
+    }
+  });
+  await test("le personnel répond en son nom uniquement (pas de faux message client ou bot)", async () => {
+    await as(db, users.receptionA, async () => {
+      await db.query("insert into chat_messages (organization_id, conversation_id, sender, body, staff_user_id) values ($1,$2,'staff','On vous rappelle',$3)", [orgA, convA, users.receptionA]);
+    });
+    await expectError(as(db, users.receptionA, () => db.query(
+      "insert into chat_messages (organization_id, conversation_id, sender, body) values ($1,$2,'bot','faux')", [orgA, convA])), /row-level security/);
+    await expectError(as(db, users.receptionA, () => db.query(
+      "insert into chat_messages (organization_id, conversation_id, sender, body, staff_user_id) values ($1,$2,'staff','x',$3)", [orgA, convA, users.ownerA])), /row-level security/);
+  });
+  await test("reprise de main : statut modifiable, identité du contact non", async () => {
+    await as(db, users.receptionA, async () => {
+      await db.query("update chat_conversations set status = 'human', needs_human = false where id = $1", [convA]);
+    });
+    await expectError(as(db, users.receptionA, () => db.query(
+      "update chat_conversations set external_user_id = '21699999999' where id = $1", [convA])), /non modifiable/);
+  });
+  await test("réglages : l'accueil lit, seul le propriétaire modifie", async () => {
+    await as(db, users.ownerA, () => db.query("insert into chatbot_settings (organization_id, enabled, knowledge) values ($1, true, 'Ouvert 6h-22h')", [orgA]));
+    await expectError(as(db, users.receptionA, () => db.query(
+      "insert into chatbot_settings (organization_id, enabled) values ($1, true)", [orgA])), /row-level security/);
+  });
+  await test("fonctions du bot réservées au serveur (service_role)", async () => {
+    for (const sql of ["select chatbot_book_session($1, gen_random_uuid(), gen_random_uuid())", "select chatbot_notify_staff($1, gen_random_uuid(), 't', 'b')"]) {
+      await expectError(as(db, users.ownerA, () => db.query(sql, [orgA])), /permission denied/);
+    }
+  });
+  await test("réservation par le bot : abonnement valide exigé, places et doublon contrôlés", async () => {
+    const session = (await one<{ id: string }>(db,
+      "insert into sessions (organization_id, kind, title, starts_at, ends_at, capacity) values ($1,'group_class','Boxe bot', now() + interval '1 day', now() + interval '1 day 1 hour', 1) returning id", [orgA])).id;
+    await expectError(db.query("select chatbot_book_session($1,$2,$3)", [orgA, session, bob]), /non valide/);
+    const id = await one<{ b: string }>(db, "select chatbot_book_session($1,$2,$3) b", [orgA, session, alice]);
+    assert(id.b, "pas de réservation");
+    await expectError(db.query("select chatbot_book_session($1,$2,$3)", [orgA, session, alice]), /Déjà inscrit/);
+    await db.query("update members set membership_end_date = current_date + 30, membership_suspended = false where id = $1", [bob]);
+    await expectError(db.query("select chatbot_book_session($1,$2,$3)", [orgA, session, bob]), /complète/);
+  });
+  await test("notification du personnel : accueil et propriétaire, pas le coach", async () => {
+    const n = await one<{ n: number }>(db, "select chatbot_notify_staff($1,$2,'Client en attente','Demande un conseiller') n", [orgA, convA]);
+    assert(Number(n.n) === 2, String(n.n));
+  });
+
   await db.end();
   console.log(`\n${passed} réussis, ${failures.length} échoués`);
   if (failures.length) {

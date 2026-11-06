@@ -70,7 +70,7 @@ export const fr = {
     weight_loss: "Perte de poids", muscle_gain: "Prise de muscle", endurance: "Endurance", wellness: "Bien-être", other: "Autre",
   },
   leadSource: {
-    walk_in: "Passage à l'accueil", website: "Site web", social_media: "Réseaux sociaux", referral: "Parrainage", other: "Autre",
+    walk_in: "Passage à l'accueil", website: "Site web", social_media: "Réseaux sociaux", referral: "Parrainage", other: "Autre", chatbot: "Chatbot",
   },
 
   checkinMethod: { search: "Recherche", member_code: "N° membre", qr: "QR code", manual: "Manuel", pin: "Code 4 chiffres" },

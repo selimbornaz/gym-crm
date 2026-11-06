@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/callback", "/auth/confirm", "/api/cron"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/callback", "/auth/confirm", "/api/cron", "/api/meta/webhook"];
 
 /**
  * Rafraîchit la session Supabase à chaque requête et redirige les visiteurs

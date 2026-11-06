@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition, type ReactNode } from "react";
-import { Bell, Building2, Check, LogOut, Menu, Monitor, Moon, Sun } from "lucide-react";
+import { Bell, Bot, Building2, Check, LogOut, Menu, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,8 @@ interface ShellProps {
   userEmail: string | null;
   role: StaffRole;
   unread: number;
+  /** Conversations du chatbot en attente (null : pas d'accès à la boîte de réception). */
+  chatAttention: number | null;
   signOutAction: () => Promise<void>;
   switchOrgAction: (formData: FormData) => Promise<void>;
   children: ReactNode;
@@ -63,6 +65,7 @@ export function AppShell(props: ShellProps) {
           </Button>
           <OrgSwitcher {...props} />
           <div className="ml-auto flex items-center gap-1">
+            {props.chatAttention !== null && <ChatbotButton attention={props.chatAttention} />}
             {props.permissions.includes("notifications.read") && (
               <Button asChild variant="ghost" size="icon" aria-label={`Notifications (${props.unread} non lues)`}>
                 <Link href="/notifications" className="relative">
@@ -82,6 +85,30 @@ export function AppShell(props: ShellProps) {
         <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{props.children}</main>
       </div>
     </div>
+  );
+}
+
+/** Accès au chatbot (boîte de réception, statistiques, réglages) avec son propre compteur. */
+function ChatbotButton({ attention }: { attention: number }) {
+  const active = usePathname().startsWith("/chatbot");
+  return (
+    <Link
+      href="/chatbot"
+      aria-label={`Chatbot (${attention} conversation${attention > 1 ? "s" : ""} en attente)`}
+      className={cn(
+        "relative mr-1 flex h-9 items-center gap-2 rounded-lg px-3.5 text-[13px] font-semibold text-primary-foreground transition-all duration-300 ease-out",
+        "bg-brand-metal shadow-[0_8px_24px_-10px_rgb(255_106_0/0.7),inset_0_1px_0_rgb(255_255_255/0.28)] hover:brightness-110",
+        active && "ring-2 ring-brand/60 ring-offset-2 ring-offset-background",
+      )}
+    >
+      <Bot className="size-[18px]" strokeWidth={2} aria-hidden />
+      <span className="hidden sm:inline">Chatbot</span>
+      {attention > 0 && (
+        <span className="absolute -right-1.5 -top-1.5 flex min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-5 text-white ring-2 ring-background">
+          {attention > 99 ? "99+" : attention}
+        </span>
+      )}
+    </Link>
   );
 }
 
