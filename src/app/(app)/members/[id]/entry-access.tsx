@@ -119,10 +119,11 @@ async function buildPassImage({ name, memberCode, pin }: { name: string; memberC
   const canvas = Object.assign(document.createElement("canvas"), { width: W, height: H });
   const ctx = canvas.getContext("2d")!;
 
-  // Fond noir avec halo orange, comme l'application.
+  // Fond noir avec halo orange sous le QR code ; le haut reste noir pur pour que
+  // le fond du logo s'y fonde sans cadre visible.
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, 520, 40, W / 2, 520, 620);
+  const glow = ctx.createRadialGradient(W / 2, 730, 40, W / 2, 730, 400);
   glow.addColorStop(0, "rgba(255,106,0,0.22)");
   glow.addColorStop(1, "rgba(255,106,0,0)");
   ctx.fillStyle = glow;
