@@ -35,6 +35,7 @@ import type { MemberRow, PaymentMethodRow, PaymentRow, PlanRow, SubscriptionRow 
 import { t } from "@/i18n";
 import { NewSubscriptionDialog, RecordPaymentDialog, RefundDialog, SubscriptionManageButtons } from "../../billing/dialogs";
 import { ArchiveMemberButton, MemberNotes, MemberPhoto } from "./member-widgets";
+import { EntryAccessCard } from "./entry-access";
 
 export const metadata: Metadata = { title: "Fiche membre" };
 
@@ -55,7 +56,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const canProgress = ctx.can("progress.manage_all", "progress.manage_assigned");
   const none = Promise.resolve({ data: null });
 
-  const [photo, subs, payments, attendance, programs, progress, notes, plans, methods] = await Promise.all([
+  const [photo, subs, payments, attendance, programs, progress, notes, plans, methods, access] = await Promise.all([
     member.photo_path ? db.storage.from("member-photos").createSignedUrl(member.photo_path, 3600) : none,
     canSubs ? db.from("subscription_overview").select("*").eq("organization_id", org).eq("member_id", id).order("start_date", { ascending: false }) : none,
     canPayments ? db.from("payment_ledger").select("*").eq("organization_id", org).eq("member_id", id).order("paid_at", { ascending: false }).limit(50) : none,
@@ -69,7 +70,10 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
     canNotes ? db.from("member_notes").select("id, body, created_at, created_by").eq("organization_id", org).eq("member_id", id).order("created_at", { ascending: false }) : none,
     ctx.can("subscriptions.write") ? db.from("membership_plans").select("*").eq("organization_id", org).eq("is_active", true).order("sort_order") : none,
     ctx.can("payments.create") ? db.from("payment_methods").select("id, name, code, is_active").eq("organization_id", org).eq("is_active", true) : none,
+    // Code d'entrée : lu sur la table (la vue member_directory ne l'expose pas).
+    db.from("members").select("checkin_pin").eq("organization_id", org).eq("id", id).maybeSingle(),
   ]);
+  const checkinPin = (access.data as { checkin_pin: string | null } | null)?.checkin_pin ?? null;
 
   const photoUrl = (photo.data as { signedUrl?: string } | null)?.signedUrl ?? null;
   const subscriptions = (subs.data ?? []) as SubscriptionRow[];
@@ -165,6 +169,16 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
       />
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="flex flex-col gap-6">
+        {/* Accès à la salle : code à 4 chiffres et image du QR code ---------------- */}
+        <EntryAccessCard
+          memberId={member.id}
+          name={member.full_name}
+          memberCode={member.member_code}
+          pin={checkinPin}
+          canRegenerate={ctx.can("members.write") && !archived}
+        />
+
         {/* Coordonnées ------------------------------------------------------------ */}
         <Card className="h-fit">
           <div className="flex items-center justify-between px-5 pb-2 pt-4">
@@ -194,6 +208,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             {ctx.can("members.archive") && <ArchiveMemberButton memberId={member.id} archived={archived} name={member.full_name} />}
           </div>
         </Card>
+        </div>
 
         {/* Onglets ---------------------------------------------------------------- */}
         <Tabs defaultValue={canSubs ? "subscriptions" : canAttendance ? "attendance" : "workouts"} className="min-w-0">

@@ -46,7 +46,7 @@ export async function searchForCheckIn(query: string): Promise<CheckInCandidate[
 const checkInSchema = z.object({
   member_id: uuid.optional(),
   member_code: z.string().trim().max(40).optional(),
-  method: z.enum(["search", "member_code", "qr", "manual"]),
+  method: z.enum(["search", "member_code", "qr", "manual", "pin"]),
   override_reason: z.string().trim().max(300).optional(),
 });
 
@@ -61,6 +61,21 @@ export async function checkInMember(_: ActionState, formData: FormData): Promise
   const parsed = parseForm(checkInSchema, formData);
   if (parsed.error) return parsed.error;
   let memberId = parsed.data.member_id;
+  let method = parsed.data.method;
+
+  // 4 chiffres seuls : code d'entrée personnel du membre (et non son n° de membre).
+  if (!memberId && parsed.data.member_code && /^\d{4}$/.test(parsed.data.member_code)) {
+    const { data } = await ctx.supabase
+      .from("members")
+      .select("id")
+      .eq("organization_id", ctx.org.id)
+      .eq("checkin_pin", parsed.data.member_code)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (!data) return { error: `Aucun membre avec le code « ${parsed.data.member_code} ».` };
+    memberId = data.id as string;
+    method = "pin";
+  }
 
   if (!memberId && parsed.data.member_code) {
     const { data } = await ctx.supabase
@@ -77,7 +92,7 @@ export async function checkInMember(_: ActionState, formData: FormData): Promise
   const { data, error } = await ctx.supabase.rpc("check_in", {
     p_org: ctx.org.id,
     p_member: memberId,
-    p_method: parsed.data.method,
+    p_method: method,
     p_override_reason: parsed.data.override_reason ?? null,
   });
   if (error) return { error: dbErrorMessage(error) };

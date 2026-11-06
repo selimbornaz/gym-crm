@@ -17,7 +17,7 @@ export default async function MemberCardPage({ params }: { params: Promise<{ id:
   const ctx = await requirePagePermission("members.read_all", "members.read_assigned");
   const { data: member } = await ctx.supabase
     .from("members")
-    .select("member_code, first_name, last_name, registered_on")
+    .select("member_code, first_name, last_name, registered_on, checkin_pin")
     .eq("organization_id", ctx.org.id)
     .eq("id", id)
     .maybeSingle();
@@ -41,6 +41,11 @@ export default async function MemberCardPage({ params }: { params: Promise<{ id:
             {member.first_name} {member.last_name}
           </p>
           <p className="mt-1 font-mono text-sm">{member.member_code}</p>
+          {member.checkin_pin && (
+            <p className="mt-1 text-xs text-zinc-600">
+              Code d&apos;entrée : <span className="font-mono text-base font-bold tracking-[0.2em] text-black">{member.checkin_pin}</span>
+            </p>
+          )}
           <p className="mt-2 text-xs text-zinc-500">Membre depuis le {formatDate(member.registered_on)}</p>
         </div>
       </div>

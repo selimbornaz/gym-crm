@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TBody, Td, Th, THead, Tr } from "@/components/ui/table";
 import { requirePagePermission } from "@/lib/auth/context";
-import { addDaysIso, formatDateLong, formatTime, todayInTunis, tunisLocalToIso } from "@/lib/format";
+import { addDaysIso, formatDate, formatDateLong, formatTime, todayInTunis, tunisLocalToIso } from "@/lib/format";
+import { MembershipBadge } from "@/components/app/status-badge";
 import { t } from "@/i18n";
 import { CheckInDesk } from "./check-in-desk";
 import type { CheckInCandidate } from "./actions";
@@ -56,6 +57,19 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
       : Promise.resolve(null),
   ]);
   const rows = (data ?? []) as unknown as AttendanceRow[];
+
+  // État actuel de l'abonnement de chaque membre passé dans la journée.
+  const memberIds = [...new Set(rows.map((r) => r.member_id))];
+  const { data: statusData } = memberIds.length
+    ? await ctx.supabase
+        .from("member_directory")
+        .select("id, membership_status, membership_end_date")
+        .eq("organization_id", ctx.org.id)
+        .in("id", memberIds)
+    : { data: [] };
+  const membership = new Map(
+    ((statusData ?? []) as Array<{ id: string; membership_status: string; membership_end_date: string | null }>).map((m) => [m.id, m]),
+  );
   const valid = rows.filter((r) => r.status === "valid");
   const present = valid.filter((r) => !r.checked_out_at).length;
   const overrides = valid.filter((r) => r.override_reason).length;
@@ -92,7 +106,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
       ) : (
         <Table>
           <THead>
-            <tr><Th>Membre</Th><Th>Entrée</Th><Th>Sortie</Th><Th>Méthode</Th><Th>Remarque</Th><Th /></tr>
+            <tr><Th>Membre</Th><Th>Abonnement</Th><Th>Entrée</Th><Th>Sortie</Th><Th>Méthode</Th><Th>Remarque</Th><Th /></tr>
           </THead>
           <TBody>
             {rows.map((r) => {
@@ -107,6 +121,9 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
                       <span className="block font-mono text-[11px] text-subtle-foreground">{r.member?.member_code}</span>
                     </span>
                   </Link>
+                </Td>
+                <Td>
+                  <SubscriptionState info={membership.get(r.member_id)} today={today} />
                 </Td>
                 <Td className="tabular-nums">
                   <span className="flex items-center gap-2">
@@ -137,5 +154,26 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
       )}
       </section>
     </div>
+  );
+}
+
+/** Statut de l'abonnement + date utile : jusqu'au…, expiré le…, expire dans N j. */
+function SubscriptionState({ info, today }: { info?: { membership_status: string; membership_end_date: string | null }; today: string }) {
+  if (!info) return <span className="text-subtle-foreground">—</span>;
+  const end = info.membership_end_date;
+  const daysLeft = end ? Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000) : null;
+  let detail: string | null = null;
+  if (end && daysLeft !== null) {
+    if (daysLeft < 0) detail = `Expiré le ${formatDate(end)}`;
+    else if (daysLeft === 0) detail = "Expire aujourd'hui";
+    else if (daysLeft <= 7) detail = `Expire dans ${daysLeft} j`;
+    else detail = `Jusqu'au ${formatDate(end)}`;
+  }
+  const tone = daysLeft !== null && daysLeft < 0 ? "text-danger" : daysLeft !== null && daysLeft <= 7 ? "text-warning" : "text-muted-foreground";
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <MembershipBadge status={info.membership_status} />
+      {detail && <span className={`text-[11px] tabular-nums ${tone}`}>{detail}</span>}
+    </span>
   );
 }

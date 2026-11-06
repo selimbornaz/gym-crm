@@ -143,6 +143,18 @@ export async function setMemberPhoto(memberId: string, path: string | null): Pro
   return { ok: true, message: path ? "Photo mise à jour." : "Photo retirée." };
 }
 
+/** Nouveau code d'entrée à 4 chiffres (l'ancien cesse de fonctionner, action journalisée). */
+export async function regenerateCheckinPin(memberId: string): Promise<ActionState> {
+  const auth = await authorize("members.write");
+  if (auth.denied) return auth.denied;
+  if (!uuid.safeParse(memberId).success) return { error: "Membre invalide." };
+
+  const { data, error } = await auth.ctx.supabase.rpc("regenerate_checkin_pin", { p_org: auth.ctx.org.id, p_member: memberId });
+  if (error) return { error: dbErrorMessage(error) };
+  revalidatePath(`/members/${memberId}`);
+  return { ok: true, message: `Nouveau code d'entrée : ${data as string}.`, data };
+}
+
 export async function addMemberNote(_: ActionState, formData: FormData): Promise<ActionState> {
   const auth = await authorize("member_notes.manage");
   if (auth.denied) return auth.denied;

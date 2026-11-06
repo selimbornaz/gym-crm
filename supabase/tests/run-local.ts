@@ -350,6 +350,51 @@ async function main() {
       assert(a.n === "1", "pas d'audit");
     });
   });
+  await test("code d'entrée : 4 chiffres attribués à l'inscription, uniques dans la salle", async () => {
+    await as(db, users.receptionA, async () => {
+      for (let i = 0; i < 40; i++) {
+        await db.query("insert into members (organization_id, first_name, last_name) values ($1, 'Lot', $2)", [orgA, `N${i}`]);
+      }
+      const r = await one<{ total: string; distinct_pins: string; bad: string }>(db,
+        "select count(*) total, count(distinct checkin_pin) distinct_pins, count(*) filter (where checkin_pin !~ '^[0-9]{4}$' or checkin_pin is null) bad from members where organization_id = $1",
+        [orgA]);
+      assert(r.bad === "0" && r.total === r.distinct_pins, JSON.stringify(r));
+    });
+  });
+  await test("code d'entrée : un doublon dans la même salle est refusé par la base", async () => {
+    await expectError(as(db, users.ownerA, async () => {
+      const pin = await one<{ checkin_pin: string }>(db, "select checkin_pin from members where id = $1", [alice]);
+      await db.query("update members set checkin_pin = $1 where id = $2", [pin.checkin_pin, bob]);
+    }), /duplicate key|unique/);
+  });
+  await test("code d'entrée : régénération (ancien code invalide, action journalisée)", async () => {
+    await as(db, users.receptionA, async () => {
+      const before = await one<{ checkin_pin: string }>(db, "select checkin_pin from members where id = $1", [alice]);
+      const after = await one<{ p: string }>(db, "select regenerate_checkin_pin($1,$2) p", [orgA, alice]);
+      assert(/^[0-9]{4}$/.test(after.p) && after.p !== before.checkin_pin, `${before.checkin_pin} -> ${after.p}`);
+      const stored = await one<{ checkin_pin: string }>(db, "select checkin_pin from members where id = $1", [alice]);
+      assert(stored.checkin_pin === after.p, "code non enregistré");
+      const old = await one<{ n: string }>(db, "select count(*) n from members where organization_id = $1 and checkin_pin = $2", [orgA, before.checkin_pin]);
+      assert(old.n === "0", "ancien code toujours attribué");
+      // Le journal d'audit est masqué à l'accueil par la RLS : lecture en administrateur.
+      await db.query("reset role");
+      const a = await one<{ n: string }>(db, "select count(*) n from audit_logs where action = 'member.checkin_pin_regenerated' and entity_id = $1", [alice]);
+      assert(a.n === "1", "pas d'audit");
+    });
+  });
+  await test("code d'entrée : impossible de régénérer celui d'un membre d'une autre salle", async () => {
+    await expectError(as(db, users.ownerB, () => db.query("select regenerate_checkin_pin($1,$2)", [orgA, alice])), /non autorisée/);
+    await expectError(as(db, users.coachA, () => db.query("select regenerate_checkin_pin($1,$2)", [orgA, alice])), /non autorisée/);
+  });
+  await test("code d'entrée : l'entrée par code est enregistrée avec la méthode « pin »", async () => {
+    await as(db, users.ownerA, async () => {
+      await db.query("update organization_settings set checkin_debounce_minutes = 0 where organization_id = $1", [orgA]);
+      const r = await one<{ r: { result: string; attendance_id: string } }>(db, "select check_in($1,$2,'pin') r", [orgA, alice]);
+      assert(r.r.result === "granted", JSON.stringify(r.r));
+      const m = await one<{ method: string }>(db, "select method from attendance where id = $1", [r.r.attendance_id]);
+      assert(m.method === "pin", m.method);
+    });
+  });
   await test("les présences ne s'insèrent pas en direct (uniquement via check_in)", async () => {
     await expectError(as(db, users.receptionA, () => db.query(
       "insert into attendance (organization_id, member_id, method) values ($1,$2,'manual')", [orgA, bob])), /permission denied/);
