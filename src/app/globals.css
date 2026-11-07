@@ -4,103 +4,105 @@
 @custom-variant dark (&:is(.dark *));
 
 /* =============================================================================
- * Design system « Dopamine Fitness » : règle 60-30-10 du logo
+ * Design system « Dopamine Fitness » : premium, sombre, verre et orange
  * -----------------------------------------------------------------------------
- *  Orange vif saturé #ff6a00 : couleur de marque dominante, partout où l'interface
- *                              porte une couleur (actions, navigation active,
- *                              chiffres clés, graphiques, focus, halos).
- *  Noir              #050505 : fond de page ; surfaces en noir mat #111111.
- *  Noir pur          #000000 : navigation et écran de connexion (fond du logo).
+ *  Noir pur  #000000 : fond de page et navigation (le fond du logo s'y fond).
+ *  Verre               : surfaces translucides (blanc 4,5 %) + flou d'arrière-plan,
+ *                        arête lumineuse en haut, bordure blanche à 9 %.
+ *  Orange    #ff6a00 : réservé à l'action et à l'état actif (boutons, focus,
+ *                        élément de menu actif, chiffres de marque).
+ *  Texte : blanc #f5f5f7, secondaire 62 %, tertiaire 42 % (lisibles sur noir).
  *
- *  Texte sur orange : toujours noir (contraste ≥ 6,7:1, le blanc échoue à 2,9:1).
- *  Les statuts gardent leurs teintes, toujours translucides (bg-*-500/10) ;
- *  l'avertissement passe au jaune pour ne pas se confondre avec la marque.
+ *  Texte posé sur l'orange : toujours noir (contraste ≥ 6,7:1).
+ *  Typographie : Bebas Neue (titres, chiffres) + Barlow (texte).
  * ========================================================================== */
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
 
-  --background: #f5f4f2;
-  --foreground: #1c1d20;          /* anthracite très sombre */
-  --card: #ffffff;
-  --card-foreground: #1c1d20;
+  --background: #f2f2f4;
+  --foreground: #111114;
+  --card: rgb(255 255 255 / 0.72);
+  --card-foreground: #111114;
   --popover: #ffffff;
-  --popover-foreground: #1c1d20;
-  --primary: #ff6a00;             /* orange vif, version jour */
-  --primary-foreground: #121212;  /* noir mat */
-  --secondary: #ecebe8;
-  --secondary-foreground: #1c1d20;
-  --muted: #ecebe8;
-  --muted-foreground: #5f6166;
-  --subtle-foreground: #75777c;   /* métadonnées tertiaires */
-  --accent: #ecebe8;
-  --accent-foreground: #1c1d20;
+  --popover-foreground: #111114;
+  --solid: #ffffff;                 /* surfaces qui doivent rester opaques */
+  --primary: #ff6a00;
+  --primary-foreground: #0a0a0a;
+  --secondary: rgb(17 17 20 / 0.05);
+  --secondary-foreground: #111114;
+  --muted: rgb(17 17 20 / 0.05);
+  --muted-foreground: #5c5c63;
+  --subtle-foreground: #7a7a82;
+  --accent: rgb(17 17 20 / 0.06);
+  --accent-foreground: #111114;
   --destructive: #c81e1e;
-  --border: #e2e0dc;
-  --border-strong: #cfccc7;       /* survol */
-  --input: #e2e0dc;
+  --border: rgb(17 17 20 / 0.09);
+  --border-strong: rgb(17 17 20 / 0.18);
+  --input: rgb(17 17 20 / 0.12);
   --ring: #f25c05;
-  --brand: #c2410c;               /* orange foncé : lisible en texte sur blanc */
+  --brand: #c2410c;
 
-  /* Statuts (texte lisible sur fond translucide) */
   --success: #047857;
   --warning: #a16207;
   --danger: #c81e1e;
   --info: #2f6299;
 
-  /* Graphiques (palette validée daltonisme, ordre fixe) */
   --chart-1: #f25c05;
   --chart-2: #2f74b8;
   --chart-3: #138a62;
-  --chart-grid: #eeece9;
+  --chart-grid: rgb(17 17 20 / 0.06);
 
-  /* Ombres douces et diffuses (cartes « bento ») */
-  --shadow-card: 0 1px 2px rgb(28 29 32 / 0.06), 0 1px 1px rgb(28 29 32 / 0.02);
-  --shadow-card-hover: 0 1px 2px rgb(28 29 32 / 0.06), 0 14px 34px -12px rgb(242 92 5 / 0.22);
-  --shadow-float: 0 16px 48px -16px rgb(28 29 32 / 0.26), 0 2px 6px rgb(28 29 32 / 0.06);
+  --glass-blur: 22px;
+  --shadow-card: 0 1px 2px rgb(17 17 20 / 0.05), 0 12px 32px -18px rgb(17 17 20 / 0.18);
+  --shadow-card-hover: 0 1px 2px rgb(17 17 20 / 0.06), 0 20px 44px -18px rgb(242 92 5 / 0.30);
+  --shadow-float: 0 24px 60px -18px rgb(17 17 20 / 0.30), 0 2px 6px rgb(17 17 20 / 0.06);
   --glow: rgb(242 92 5 / 0.10);
-  --ambient: rgb(242 92 5 / 0.07);
-  --highlight: rgb(255 255 255 / 0);
+  --ambient-1: rgb(255 106 0 / 0.10);
+  --ambient-2: rgb(255 140 60 / 0.06);
+  --highlight: rgb(255 255 255 / 0.9);
 }
 
 .dark {
-  --background: #050505;          /* noir */
-  --foreground: #ffffff;
-  --card: #111111;                /* noir mat des surfaces */
-  --card-foreground: #ffffff;
-  --popover: #161616;
-  --popover-foreground: #ffffff;
-  --primary: #ff6a00;             /* orange vif saturé */
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: rgb(255 255 255 / 0.045);
+  --card-foreground: #f5f5f7;
+  --popover: rgb(28 28 30 / 0.92);
+  --popover-foreground: #f5f5f7;
+  --solid: #161618;
+  --primary: #ff6a00;
   --primary-foreground: #0a0a0a;
-  --secondary: #1c1c1c;
-  --secondary-foreground: #ffffff;
-  --muted: #1c1c1c;
-  --muted-foreground: #b8b8b8;
-  --subtle-foreground: #8f8f8f;
-  --accent: #1f1f1f;
-  --accent-foreground: #ffffff;
+  --secondary: rgb(255 255 255 / 0.07);
+  --secondary-foreground: #f5f5f7;
+  --muted: rgb(255 255 255 / 0.06);
+  --muted-foreground: rgb(235 235 245 / 0.62);
+  --subtle-foreground: rgb(235 235 245 / 0.42);
+  --accent: rgb(255 255 255 / 0.07);
+  --accent-foreground: #f5f5f7;
   --destructive: #ff4d4d;
-  --border: #242424;
-  --border-strong: #3a3a3a;
-  --input: #2a2a2a;
+  --border: rgb(255 255 255 / 0.09);
+  --border-strong: rgb(255 255 255 / 0.18);
+  --input: rgb(255 255 255 / 0.12);
   --ring: #ff7a1a;
-  --brand: #ff7a1a;               /* orange lumineux : lisible en texte sur noir */
+  --brand: #ff7a1a;
 
-  --success: #2ee59d;
+  --success: #30d68b;
   --warning: #ffd23f;
-  --danger: #ff4d4d;
+  --danger: #ff5a5a;
   --info: #4da3ff;
 
   --chart-1: #ff6a00;
   --chart-2: #3d9bff;
-  --chart-3: #2ee59d;
-  --chart-grid: #1f1f1f;
+  --chart-3: #30d68b;
+  --chart-grid: rgb(255 255 255 / 0.06);
 
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 1px 2px rgb(0 0 0 / 0.6);
-  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 0 0 1px rgb(255 106 0 / 0.35), 0 18px 48px -16px rgb(255 106 0 / 0.45);
-  --shadow-float: 0 24px 64px -16px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.06);
-  --glow: rgb(255 106 0 / 0.20);
-  --ambient: rgb(255 106 0 / 0.14);
-  --highlight: rgb(255 255 255 / 0.06);
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.07) inset, 0 24px 48px -28px rgb(0 0 0 / 0.9);
+  --shadow-card-hover: 0 1px 0 rgb(255 255 255 / 0.10) inset, 0 0 0 1px rgb(255 106 0 / 0.30), 0 28px 60px -24px rgb(255 106 0 / 0.38);
+  --shadow-float: 0 32px 80px -20px rgb(0 0 0 / 0.95), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --glow: rgb(255 106 0 / 0.16);
+  --ambient-1: rgb(255 106 0 / 0.16);
+  --ambient-2: rgb(255 72 0 / 0.08);
+  --highlight: rgb(255 255 255 / 0.08);
 }
 
 @theme inline {
@@ -113,6 +115,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-solid: var(--solid);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -142,7 +145,7 @@
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: calc(var(--radius) - 2px);
   --radius-xl: var(--radius);
-  --radius-2xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 6px);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -155,7 +158,6 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
   }
-  /* Les barres de défilement n'héritent pas des variables du thème de la zone. */
   .brand-rail nav {
     scrollbar-color: #2a2a2a transparent;
   }
@@ -163,48 +165,53 @@
     color-scheme: dark;
   }
   body {
-    @apply bg-background font-sans text-[14.5px] leading-[1.5] text-foreground antialiased;
+    @apply bg-background font-sans text-[14.5px] leading-[1.55] text-foreground antialiased;
     text-rendering: optimizeLegibility;
-    /* Lueur orange très discrète en haut de page. */
-    background-image: radial-gradient(70rem 26rem at 75% -8rem, var(--ambient), transparent 70%);
+    
+    /* Deux lueurs braise, fixes : elles donnent de la matière aux surfaces de verre. */
+    background-image:
+      radial-gradient(60rem 34rem at 88% -12rem, var(--ambient-1), transparent 70%),
+      radial-gradient(48rem 30rem at 18% 110%, var(--ambient-2), transparent 70%);
     background-repeat: no-repeat;
     background-attachment: fixed;
   }
   h1, h2, h3 {
-    @apply tracking-[-0.005em];
+    @apply tracking-[-0.02em];
   }
   ::selection {
-    background: rgb(255 107 15 / 0.32);
+    background: rgb(255 106 0 / 0.35);
   }
   input[type="checkbox"],
   input[type="radio"] {
     accent-color: var(--primary);
   }
-  /* Respect des préférences d'accessibilité : pas d'animation forcée. */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
     }
   }
 }
 
 @layer utilities {
-  /* Libellé « eyebrow » : petites capitales espacées pour les en-têtes de section. */
+  /* Libellé de section : discret, en minuscules, sans espacement forcé. */
   .text-eyebrow {
-    @apply text-[11px] font-semibold uppercase leading-none tracking-[0.12em] text-subtle-foreground;
+    @apply text-[12px] font-medium leading-none tracking-[-0.005em] text-subtle-foreground;
   }
-  /* Noir mat de la navigation et du panneau de connexion, réchauffé en haut. */
+  /* Verre : surface translucide floutée. */
+  .glass {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  }
+  /* Navigation : noir pur (le fond du logo s'y fond), séparée par un filet de verre. */
   .brand-rail {
-    background:
-      radial-gradient(28rem 20rem at 0% 0%, rgb(255 106 0 / 0.14), transparent 70%),
-      #000000;
-    box-shadow: inset -1px 0 0 rgb(255 106 0 / 0.28);
-    --border: #26282c;
-    --accent: #24262a;
+    background: #000000;
+    box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.07);
+    --border: rgb(255 255 255 / 0.08);
+    --accent: rgb(255 255 255 / 0.07);
   }
-  /* Orange métallisé du logo (reflet clair en haut, orange vif, arête plus soutenue).
-     Le texte posé dessus est noir mat : contraste ≥ 5,4:1 sur toute la plage. */
+  /* Orange métallisé du logo ; le texte posé dessus est noir. */
   .bg-brand-metal {
     background: linear-gradient(160deg, #ffa240 0%, #ff7a00 35%, #ff6a00 65%, #ff5a00 100%);
   }
@@ -214,48 +221,41 @@
     background-clip: text;
     color: transparent;
   }
-  /* Titres et chiffres en police d'affichage. */
+  /* Titres : Bebas Neue, capitales condensées. */
   .font-display {
     font-family: var(--font-display);
-    font-feature-settings: normal;
+    font-weight: 400;
+    letter-spacing: 0.02em;
   }
-  /* Filet orange qui s'estompe aux extrémités. */
   .hairline-brand {
     display: block;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(255 107 15 / 0.85), transparent);
+    background: linear-gradient(90deg, transparent, rgb(255 106 0 / 0.85), transparent);
   }
-  /* Fines rayures obliques (vitesse, effort), estompées vers les bords. */
   .brand-stripes {
     background-image: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.035) 0 1px, transparent 1px 14px);
     -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent);
     mask-image: radial-gradient(closest-side, #000 30%, transparent);
   }
-  /* Chiffres alignés et resserrés pour les KPI. */
-  .text-figure {
+  /* Chiffres clés : Bebas Neue, alignés. */
+  .num-figure {
     @apply font-normal tabular-nums tracking-[0.02em];
     font-family: var(--font-display);
   }
-  /* Halo radial qui apparaît au survol d'une carte (le parent porte `group`). */
   .glow-on-hover {
-    @apply pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100;
+    @apply pointer-events-none absolute inset-0 rounded-[inherit] opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100;
     background: radial-gradient(120% 80% at 50% -10%, var(--glow), transparent 60%);
   }
-  /* Fine lumière sur l'arête supérieure (sensation de matière en dark mode). */
   .edge-highlight {
     box-shadow: inset 0 1px 0 var(--highlight);
   }
-  /*
-   * Bordure dégradée révélée au survol : un pseudo-élément de 1 px masqué au
-   * centre (mask-composite) se superpose à la bordure neutre de la carte.
-   */
   .gradient-border::before {
     content: "";
     position: absolute;
     inset: -1px;
     padding: 1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgb(255 107 15 / 0.9), rgb(255 107 15 / 0) 45%, rgb(255 107 15 / 0.4));
+    background: linear-gradient(135deg, rgb(255 106 0 / 0.9), rgb(255 106 0 / 0) 45%, rgb(255 106 0 / 0.4));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -268,9 +268,33 @@
   .gradient-border[data-active="true"]::before {
     opacity: 1;
   }
+  /*
+   * Entrée de page : le seul mouvement automatique de l'interface. À chaque
+   * navigation, les blocs de la page montent et apparaissent l'un après l'autre.
+   */
+  .page-enter > * > * {
+    /* `backwards` : aucun style ne persiste après l'animation (survols intacts). */
+    animation: page-rise 700ms var(--ease-out-soft) backwards;
+  }
+  .page-enter > * > *:nth-child(2) { animation-delay: 70ms; }
+  .page-enter > * > *:nth-child(3) { animation-delay: 140ms; }
+  .page-enter > * > *:nth-child(4) { animation-delay: 210ms; }
+  .page-enter > * > *:nth-child(n + 5) { animation-delay: 260ms; }
 }
 
-/* Impression (reçus) : on masque la navigation. */
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
 @media print {
   .no-print {
     display: none !important;

@@ -31,7 +31,7 @@ export default async function EquipmentPage() {
   const canManage = ctx.can("equipment.manage");
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader title="Équipements" description="Inventaire, état et maintenance." actions={canManage && <EquipmentDialog />} />
 
       {due.length > 0 && (

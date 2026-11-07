@@ -12,7 +12,7 @@ export function DropdownMenuContent({ className, sideOffset = 6, ...props }: Rea
     <Menu.Portal>
       <Menu.Content
         sideOffset={sideOffset}
-        className={cn("z-50 min-w-48 rounded-xl border bg-popover/90 p-1 text-popover-foreground shadow-float backdrop-blur-xl", className)}
+        className={cn("z-50 min-w-48 glass rounded-2xl border bg-popover p-1.5 text-popover-foreground shadow-float", className)}
         {...props}
       />
     </Menu.Portal>

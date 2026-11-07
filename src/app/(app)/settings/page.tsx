@@ -29,7 +29,7 @@ export default async function SettingsPage() {
   const methodList = (methods ?? []) as PaymentMethodRow[];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-10">
       <PageHeader title="Paramètres" description="Configuration propre à votre salle. Chaque modification est journalisée." />
       <Tabs defaultValue="plans">
         <TabsList>
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
                 </div>
                 <h3 className="mt-4 text-[15px] font-semibold tracking-[-0.015em]">{p.name}</h3>
                 <p className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-figure text-[26px] leading-none">{formatMoney(p.price).replace(/\s?DT$/, "")}</span>
+                  <span className="num-figure text-[26px] leading-none">{formatMoney(p.price).replace(/\s?DT$/, "")}</span>
                   <span className="text-[12px] text-muted-foreground">
                     DT / {p.duration_value} {t.durationUnit[p.duration_unit]}
                   </span>

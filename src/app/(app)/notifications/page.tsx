@@ -29,7 +29,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const rows = (data ?? []) as Array<{ id: string; type: keyof typeof t.notificationType; title: string; body: string | null; link: string | null; read_at: string | null; created_at: string }>;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader
         title="Notifications"
         description="Alertes générées automatiquement chaque jour et annonces internes."

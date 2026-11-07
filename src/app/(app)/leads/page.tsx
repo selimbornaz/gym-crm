@@ -18,7 +18,7 @@ export default async function LeadsPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader title="Prospects" description="Tunnel de vente : glissez une carte vers l'étape suivante, cliquez pour ouvrir la fiche." />
       <LeadBoard
         leads={(data ?? []) as unknown as LeadView[]}

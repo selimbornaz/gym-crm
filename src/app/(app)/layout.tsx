@@ -18,11 +18,23 @@ async function switchOrganization(formData: FormData) {
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const ctx = await requireContext();
-  const { count } = await ctx.supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", ctx.org.id)
-    .is("read_at", null);
+  const canChat = ctx.can("chatbot.inbox");
+  const [{ count }, chat] = await Promise.all([
+    // Cloche générale : sans les alertes du chatbot, qui ont leur propre compteur.
+    ctx.supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.org.id)
+      .is("read_at", null)
+      .neq("type", "chatbot"),
+    canChat
+      ? ctx.supabase
+          .from("chat_conversations")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", ctx.org.id)
+          .or("needs_human.eq.true,unread_count.gt.0")
+      : Promise.resolve({ count: 0 }),
+  ]);
 
   let offlineNotice: string | null = null;
   if (process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1") {
@@ -55,6 +67,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       role={ctx.role}
       unread={count ?? 0}
       offlineNotice={offlineNotice}
+      chatAttention={canChat ? (chat.count ?? 0) : null}
       signOutAction={signOut}
       switchOrgAction={switchOrganization}
     >

@@ -59,7 +59,7 @@ export default async function SubscriptionsPage({ searchParams }: { searchParams
   const rows = (data ?? []) as SubscriptionRow[];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader title="Abonnements" description="Suivi des échéances, renouvellements et soldes. Les abonnements expirés sont conservés." />
       <SearchBar placeholder="Membre, n° ou formule" defaultValue={sp.q} resetHref="/subscriptions">
         <NativeSelect name="view" defaultValue={view} aria-label="Vue" className="w-auto bg-card">

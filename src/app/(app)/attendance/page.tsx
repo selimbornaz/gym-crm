@@ -75,7 +75,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const overrides = valid.filter((r) => r.override_reason).length;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
       <PageHeader
         title="Présences"
         description={formatDateLong(day)}

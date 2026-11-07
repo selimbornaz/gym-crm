@@ -57,7 +57,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const rows = (data ?? []) as Array<{ id: number; action: string; entity_type: string; entity_id: string | null; reason: string | null; before_data: Record<string, unknown> | null; after_data: Record<string, unknown> | null; created_at: string; actor_user_id: string | null }>;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader title="Journal d'audit" description="Actions sensibles : finances, abonnements, présences, personnel, paramètres. Lecture seule, non modifiable." />
       <form method="get" className="flex flex-wrap items-center gap-2">
         <NativeSelect name="entity" defaultValue={sp.entity ?? ""} aria-label="Type" className="w-auto bg-card">

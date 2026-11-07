@@ -27,4 +27,16 @@ export const serverEnv = {
   get cronSecret() {
     return required("CRON_SECRET", process.env.CRON_SECRET);
   },
+  /** Application Meta (Instagram, Messenger, WhatsApp) : signature des webhooks. */
+  get metaAppSecret() {
+    return required("META_APP_SECRET", process.env.META_APP_SECRET);
+  },
+  /** Jeton choisi librement, recopié dans la configuration du webhook chez Meta. */
+  get metaVerifyToken() {
+    return required("META_VERIFY_TOKEN", process.env.META_VERIFY_TOKEN);
+  },
+  /** Le SDK Anthropic lit lui-même ANTHROPIC_API_KEY ; ici on vérifie seulement sa présence. */
+  get anthropicConfigured() {
+    return Boolean(process.env.ANTHROPIC_API_KEY);
+  },
 };

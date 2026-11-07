@@ -42,7 +42,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const methodOptions = (methods ?? []).map((m) => ({ id: m.id as string, label: m.name as string }));
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader title="Dépenses" description="Loyer, électricité, salaires, équipement… Une dépense erronée s'annule, elle ne se supprime pas." actions={<ExpenseDialog methods={methodOptions} />} />
 
       <form method="get" className="flex flex-wrap items-end gap-3">

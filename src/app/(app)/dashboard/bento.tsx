@@ -69,7 +69,7 @@ export function BentoCard({
           <span aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-[radial-gradient(closest-side,rgb(255_106_0/0.16),transparent)]" />
         </>
       )}
-      <div className="relative flex items-center justify-between gap-3 px-5 pt-4">
+      <div className="relative flex items-center justify-between gap-3 px-6 pt-5">
         <span className="flex items-center gap-2">
           {Icon &&
             (hero ? (
@@ -92,7 +92,7 @@ export function BentoCard({
           </Link>
         )}
       </div>
-      <div className="relative flex flex-1 flex-col px-5 pb-5 pt-3">{children}</div>
+      <div className="relative flex flex-1 flex-col px-6 pb-6 pt-4">{children}</div>
     </Card>
   );
 }
@@ -105,10 +105,10 @@ export function Figure({ value, size = "lg" }: { value: string; size?: "xl" | "l
   return (
     <p
       className={cn(
-        "text-figure leading-none text-foreground",
-        size === "xl" && "text-[56px]",
-        size === "lg" && "text-[40px]",
-        size === "md" && "text-[32px]",
+        "num-figure leading-none text-foreground",
+        size === "xl" && "text-[60px]",
+        size === "lg" && "text-[44px]",
+        size === "md" && "text-[34px]",
       )}
     >
       {main}

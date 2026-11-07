@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   "notifications.read", "announcements.manage",
   "equipment.read", "equipment.manage",
   "staff.manage", "settings.manage", "audit.read",
+  "chatbot.inbox", "chatbot.manage",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

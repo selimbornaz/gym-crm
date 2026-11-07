@@ -33,7 +33,7 @@ export default async function StaffPage() {
   const staff = (data ?? []) as unknown as StaffRow[];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader
         title="Employés"
         description="Comptes, rôles et accès du personnel. Les changements sont journalisés."
