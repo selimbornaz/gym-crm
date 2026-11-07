@@ -55,7 +55,7 @@ export default async function ChatbotPage({ searchParams }: { searchParams: Prom
   const settings = { organization_id: ctx.org.id, ...DEFAULT_SETTINGS, ...(settingsRow ?? {}) } as ChatbotSettings;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
       <PageHeader
         title="Chatbot"
         description={

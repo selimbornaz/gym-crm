@@ -91,7 +91,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const methodsList = (methods.data ?? []) as PaymentMethodRow[];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
       {/* Fil d'Ariane ----------------------------------------------------------- */}
       <nav aria-label="Fil d'Ariane" className="flex items-center gap-1 text-[12px] text-muted-foreground">
         <Link href="/members" className="rounded px-1 transition-colors duration-300 ease-out hover:text-foreground">Membres</Link>
@@ -169,7 +169,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
       />
 
       <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-10">
         {/* Accès à la salle : code à 4 chiffres et image du QR code ---------------- */}
         <EntryAccessCard
           memberId={member.id}

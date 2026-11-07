@@ -21,7 +21,7 @@ export function StatCard({
 }) {
   const body = (
     <Card interactive={!!href} className="h-full">
-      <div className="flex flex-col gap-3 p-5">
+      <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center justify-between">
           <span className="text-eyebrow">{label}</span>
           <span
@@ -34,13 +34,13 @@ export function StatCard({
             <Icon className="size-3.5" strokeWidth={1.75} aria-hidden />
           </span>
         </div>
-        <p className="text-figure text-[26px] leading-none">{value}</p>
+        <p className="num-figure text-[36px] leading-none">{value}</p>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       </div>
     </Card>
   );
   return href ? (
-    <Link href={href} className="rounded-xl transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
+    <Link href={href} className="rounded-2xl transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60">
       {body}
     </Link>
   ) : (

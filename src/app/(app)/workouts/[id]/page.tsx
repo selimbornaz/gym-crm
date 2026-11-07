@@ -55,7 +55,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ id: st
   const completedCount = (logs ?? []).filter((l) => l.completed).length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader
         title={program.name}
         description={

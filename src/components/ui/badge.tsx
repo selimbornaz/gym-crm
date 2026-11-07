@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * Jamais d'aplat vif ; la couleur d'un statut est toujours doublée d'un libellé.
  */
 const badgeVariants = cva(
-  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 tracking-[0.01em] ring-1 ring-inset transition-colors duration-300 ease-out",
+  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold leading-4 tracking-[-0.005em] ring-1 ring-inset transition-colors duration-300 ease-out",
   {
     variants: {
       variant: {

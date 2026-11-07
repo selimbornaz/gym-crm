@@ -49,7 +49,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const exportHref = `/members/export?${new URLSearchParams(Object.entries({ q: sp.q ?? "", status: sp.status ?? "" }).filter(([, v]) => v))}`;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader
         title="Membres"
         description={ctx.can("members.read_all") ? "Tous les membres de la salle." : "Les membres qui vous sont assignés."}

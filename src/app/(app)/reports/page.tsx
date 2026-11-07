@@ -47,7 +47,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const p = pl.data as PL | null;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader
         title="Rapports financiers"
         description={`Du ${formatDate(from)} au ${formatDate(to)} — encaissements réels uniquement (les impayés ne sont pas du chiffre d'affaires).`}

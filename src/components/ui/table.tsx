@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /** Tableau responsive : défilement horizontal sur petit écran plutôt que débordement. */
 export function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div className="edge-highlight w-full overflow-x-auto rounded-xl border bg-card shadow-card">
+    <div className="glass w-full overflow-x-auto rounded-2xl border bg-card shadow-card">
       <table className={cn("w-full caption-bottom text-[13px]", className)} {...props} />
     </div>
   );
@@ -23,9 +23,9 @@ export function Tr({ className, ...props }: React.ComponentProps<"tr">) {
 }
 
 export function Th({ className, ...props }: React.ComponentProps<"th">) {
-  return <th className={cn("text-eyebrow h-10 whitespace-nowrap px-4 font-medium", className)} {...props} />;
+  return <th className={cn("text-eyebrow h-12 whitespace-nowrap px-5 font-medium", className)} {...props} />;
 }
 
 export function Td({ className, ...props }: React.ComponentProps<"td">) {
-  return <td className={cn("px-4 py-3 align-middle", className)} {...props} />;
+  return <td className={cn("px-5 py-3.5 align-middle", className)} {...props} />;
 }

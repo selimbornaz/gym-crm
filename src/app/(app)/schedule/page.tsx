@@ -55,7 +55,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
   const capacity = scheduled.reduce((n, s) => n + s.capacity, 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
       <PageHeader
         title="Planning"
         description={`Semaine du ${formatDate(monday)} au ${formatDate(addDaysIso(monday, 6))} · ${scheduled.length} séance${scheduled.length > 1 ? "s" : ""} · remplissage ${capacity === 0 ? "—" : `${Math.round((booked / capacity) * 100)} %`}`}
@@ -100,7 +100,7 @@ export default async function SchedulePage({ searchParams }: { searchParams: Pro
                   <span className={cn("text-eyebrow", isToday && "text-brand")}>{(t.weekdays[i] ?? "").slice(0, 3)}.</span>
                   <span
                     className={cn(
-                      "text-figure text-[18px] leading-none",
+                      "num-figure text-[18px] leading-none",
                       past && "text-subtle-foreground",
                       isToday && "rounded-md bg-primary px-1.5 py-0.5 text-[15px] text-primary-foreground",
                     )}

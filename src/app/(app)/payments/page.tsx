@@ -55,7 +55,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
       <PageHeader
         title="Paiements"
         description={`Du ${formatDate(fromDate)} au ${formatDate(toDate)} · un paiement ne se supprime jamais : il se rembourse ou s'annule.`}

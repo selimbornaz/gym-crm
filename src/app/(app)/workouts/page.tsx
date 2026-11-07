@@ -48,7 +48,7 @@ export default async function WorkoutsPage({ searchParams }: { searchParams: Pro
   const coachOptions = coaches ? coaches.map((c) => ({ id: c.id as string, label: c.full_name as string })) : undefined;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader
         title="Programmes d'entraînement"
         description={ctx.can("workouts.manage_all") ? "Tous les programmes de la salle." : "Les programmes de vos membres et vos modèles."}

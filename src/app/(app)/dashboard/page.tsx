@@ -156,13 +156,14 @@ export default async function DashboardPage() {
   const presentNames = s.recent_checkins.map((c) => c.name);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <p className="text-eyebrow">{formatDateLong(s.today)}</p>
-        <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em]">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
+      <header className="flex flex-col gap-3">
+        <h1 className="font-display text-balance text-[clamp(3rem,2rem+3.4vw,5.5rem)] leading-[0.88]">
           Bonjour {ctx.fullName.split(" ")[0] ?? ""}
-          <span className="text-muted-foreground"> — voici {ctx.org.name} aujourd&apos;hui.</span>
         </h1>
+        <p className="text-[15px] text-muted-foreground">
+          {formatDateLong(s.today)}, voici {ctx.org.name} aujourd&apos;hui.
+        </p>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12">
@@ -177,11 +178,11 @@ export default async function DashboardPage() {
               <dl className="flex gap-6 text-right">
                 <div>
                   <dt className="text-eyebrow">Aujourd&apos;hui</dt>
-                  <dd className="text-figure mt-1.5 text-[15px]">{formatMoney(s.revenue_today)}</dd>
+                  <dd className="num-figure mt-1.5 text-[15px]">{formatMoney(s.revenue_today)}</dd>
                 </div>
                 <div>
                   <dt className="text-eyebrow">Cette année</dt>
-                  <dd className="text-figure mt-1.5 text-[15px]">{formatMoney(s.revenue_year)}</dd>
+                  <dd className="num-figure mt-1.5 text-[15px]">{formatMoney(s.revenue_year)}</dd>
                 </div>
               </dl>
             </div>
@@ -349,7 +350,7 @@ export default async function DashboardPage() {
                       <p className="truncate font-mono text-[11px] text-subtle-foreground">{p.receipt}</p>
                     </div>
                     {Number(p.refunded) > 0 && <Badge variant="warning">Remboursé {formatMoney(p.refunded)}</Badge>}
-                    <span className="text-figure w-28 shrink-0 text-right text-[13px]">{formatMoney(p.amount)}</span>
+                    <span className="num-figure w-28 shrink-0 text-right text-[13px]">{formatMoney(p.amount)}</span>
                   </Link>
                 </li>
               ))}

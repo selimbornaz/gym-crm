@@ -25,7 +25,7 @@ export default async function CoachesPage() {
   for (const m of (assigned ?? []) as Array<{ coach_id: string }>) counts.set(m.coach_id, (counts.get(m.coach_id) ?? 0) + 1);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <PageHeader title="Coachs" description="Spécialités, disponibilités et membres suivis." actions={ctx.can("coaches.manage") && <CoachDialog />} />
       {coaches.length === 0 ? (
         <EmptyState icon={Dumbbell} title="Aucun coach" description="Ajoutez vos coachs pour leur assigner des membres et des séances." />

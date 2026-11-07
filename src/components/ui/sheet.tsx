@@ -12,10 +12,10 @@ export const SheetClose = SheetPrimitive.Close;
 export function SheetContent({ className, children, ...props }: React.ComponentProps<typeof SheetPrimitive.Content>) {
   return (
     <SheetPrimitive.Portal>
-      <SheetPrimitive.Overlay className="fixed inset-0 z-50 bg-zinc-950/30 backdrop-blur-sm" />
+      <SheetPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md" />
       <SheetPrimitive.Content
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l bg-card shadow-float sm:max-w-md",
+          "fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l bg-solid/95 glass shadow-float sm:max-w-md",
           className,
         )}
         {...props}
@@ -35,7 +35,7 @@ export function SheetHeader({ className, ...props }: React.ComponentProps<"div">
 }
 
 export function SheetTitle({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Title>) {
-  return <SheetPrimitive.Title className={cn("text-lg font-semibold", className)} {...props} />;
+  return <SheetPrimitive.Title className={cn("text-xl font-bold tracking-[-0.025em]", className)} {...props} />;
 }
 
 export function SheetDescription({ className, ...props }: React.ComponentProps<typeof SheetPrimitive.Description>) {
