@@ -40,7 +40,12 @@ async function logEvents(admin: SupabaseClient, conversation: ChatConversation, 
  * Traite un message entrant : enregistrement (sans doublon), puis réponse du bot
  * si la conversation n'est pas reprise par l'équipe. Retourne la réponse envoyée.
  */
-export async function handleIncoming(admin: SupabaseClient, msg: IncomingChat): Promise<{ reply: string | null; conversationId: string }> {
+export async function handleIncoming(
+  admin: SupabaseClient,
+  msg: IncomingChat,
+): Promise<{ reply: string | null; conversationId: string; error?: string }> {
+  // Le simulateur sert à tester : il répond même bot désactivé, et ne passe jamais la main.
+  const isTest = msg.channel === "simulator";
   const org = msg.organizationId;
   const settings = await loadSettings(admin, org);
   const now = new Date().toISOString();
@@ -91,8 +96,8 @@ export async function handleIncoming(admin: SupabaseClient, msg: IncomingChat): 
 
   // L'équipe a la main : passage demandé (needs_human) ou réponse d'un employé récente (pause).
   const pausedByStaff = conversation.bot_paused_until !== null && new Date(conversation.bot_paused_until) > new Date();
-  const waitingForStaff = conversation.status === "human" && (pausedByStaff || conversation.needs_human);
-  const botReplies = settings.enabled && !waitingForStaff;
+  const waitingForStaff = !isTest && conversation.status === "human" && (pausedByStaff || conversation.needs_human);
+  const botReplies = (settings.enabled || isTest) && !waitingForStaff;
 
   await admin
     .from("chat_conversations")
@@ -126,6 +131,7 @@ export async function handleIncoming(admin: SupabaseClient, msg: IncomingChat): 
 
   let reply: string;
   let handoff = false;
+  let failure: string | undefined;
   let usage = { inputTokens: 0, outputTokens: 0 };
   try {
     const result = await generateBotReply({ admin, settings, conversation, events });
@@ -135,9 +141,24 @@ export async function handleIncoming(admin: SupabaseClient, msg: IncomingChat): 
     events.push({ kind: "bot_reply", details: { input_tokens: usage.inputTokens, output_tokens: usage.outputTokens } });
   } catch (err) {
     // IA indisponible (clé absente, quota…) : l'équipe prend le relais.
+    failure = describeAiError(err);
     reply = settings.handoff_message;
     handoff = true;
-    events.push({ kind: "error", details: { message: (err as Error).message.slice(0, 300) } });
+    events.push({ kind: "error", details: { message: failure } });
+  }
+  if (isTest) {
+    // Simulateur : pas de passage à l'équipe ; une panne est montrée comme message système.
+    handoff = false;
+    if (failure) {
+      await admin.from("chat_messages").insert({
+        organization_id: org,
+        conversation_id: conversation.id,
+        sender: "system",
+        body: `Le bot n'a pas pu répondre : ${failure}`,
+      });
+      await logEvents(admin, conversation, events);
+      return { reply: null, conversationId: conversation.id, error: failure };
+    }
   }
 
   const sent = await deliver(admin, conversation, msg.accountExternalId, reply);
@@ -171,6 +192,17 @@ export async function handleIncoming(admin: SupabaseClient, msg: IncomingChat): 
   }
   await logEvents(admin, conversation, events);
   return { reply, conversationId: conversation.id };
+}
+
+/** Message d'erreur de l'IA compréhensible par la salle. */
+function describeAiError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (!process.env.ANTHROPIC_API_KEY || /api[_ -]?key|authentication|401/i.test(raw)) {
+    return "clé ANTHROPIC_API_KEY absente ou invalide sur le serveur (Vercel → Settings → Environment Variables, puis Redeploy).";
+  }
+  if (/credit|billing|balance|402/i.test(raw)) return "crédit Anthropic épuisé (console.anthropic.com → Billing).";
+  if (/rate|429|overloaded|529/i.test(raw)) return "service IA surchargé, réessayez dans un instant.";
+  return raw.slice(0, 300);
 }
 
 /** Envoie un texte sur le canal de la conversation (rien pour le simulateur). */

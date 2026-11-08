@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/callback", "/auth/confirm", "/api/cron", "/api/meta/webhook"];
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/auth/callback", "/auth/confirm", "/api/cron", "/api/meta/webhook", "/api/chatbot/remote"];
 
 /**
  * Rafraîchit la session Supabase à chaque requête et redirige les visiteurs
@@ -39,7 +39,9 @@ export async function middleware(request: NextRequest) {
   if (!user && !isPublic) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", path);
+    // Retour exact après connexion, onglet compris (ex. /chatbot?tab=settings).
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", path + request.nextUrl.search);
     return NextResponse.redirect(loginUrl);
   }
   if (user && path === "/login") {

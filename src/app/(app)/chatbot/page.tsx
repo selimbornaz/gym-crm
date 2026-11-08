@@ -199,7 +199,15 @@ async function InboxTab({ ctxOrg, supabase, selectedId }: { ctxOrg: string; supa
 
 function MessageBubble({ message, staffName }: { message: ChatMessage; staffName?: string }) {
   const fromContact = message.sender === "contact";
-  const label = message.sender === "bot" ? "Bot" : message.sender === "staff" ? (staffName ?? "Équipe") : message.sender === "system" ? "Système" : null;
+  if (message.sender === "system") {
+    return (
+      <div role="status" className="mx-auto flex max-w-[90%] items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-[12.5px] text-warning">
+        <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <p className="whitespace-pre-wrap break-words">{message.body}</p>
+      </div>
+    );
+  }
+  const label = message.sender === "bot" ? "Bot" : message.sender === "staff" ? (staffName ?? "Équipe") : null;
   return (
     <div className={cn("flex", fromContact ? "justify-start" : "justify-end")}>
       <div className={cn("max-w-[80%] rounded-2xl px-3.5 py-2.5 text-[13.5px] leading-relaxed", fromContact ? "rounded-bl-md bg-secondary" : message.sender === "bot" ? "rounded-br-md border border-brand/30 bg-brand/10" : "rounded-br-md bg-brand-metal text-primary-foreground")}>
@@ -230,7 +238,7 @@ async function StatsTab({ ctxOrg, supabase }: { ctxOrg: string; supabase: Db }) 
   const conversations = count("conversation_started");
   const replies = count("bot_reply");
   const handoffs = count("handoff");
-  const automated = replies ? Math.round(((replies - handoffs) / replies) * 100) : null;
+  const automated = replies ? Math.max(0, Math.round(((replies - handoffs) / replies) * 100)) : null;
   const tokensIn = ev.reduce((n, e) => n + (e.kind === "bot_reply" ? Number(e.details?.input_tokens ?? 0) : 0), 0);
   const tokensOut = ev.reduce((n, e) => n + (e.kind === "bot_reply" ? Number(e.details?.output_tokens ?? 0) : 0), 0);
   // Tarif Claude Opus 5.5 : 4 $ / million de jetons en entrée, 20 $ en sortie (estimation).
@@ -331,7 +339,7 @@ async function SettingsTab({ ctxOrg, userId, supabase, settings }: { ctxOrg: str
       <Card className="flex h-fit max-h-[80vh] flex-col overflow-hidden xl:sticky xl:top-20">
         <div className="border-b px-4 py-3">
           <p className="flex items-center gap-2 text-[14px] font-semibold"><Bot className="size-4 text-brand" aria-hidden /> Simulateur</p>
-          <p className="text-[12px] text-muted-foreground">Parlez au bot comme un client : il utilise vos vraies formules et votre planning. Rien n&apos;est envoyé à Meta.{!settings.enabled && " Activez le bot pour qu'il réponde."}</p>
+          <p className="text-[12px] text-muted-foreground">Parlez au bot comme un client : il utilise vos vraies formules et votre planning. Rien n&apos;est envoyé à Meta. Le simulateur répond même quand le bot est désactivé.</p>
         </div>
         <div className="min-h-64 flex-1 space-y-3 overflow-y-auto p-4">
           {messages.length === 0 && <p className="py-10 text-center text-[13px] text-subtle-foreground">Écrivez un premier message ci-dessous.</p>}
@@ -352,10 +360,16 @@ async function SettingsTab({ ctxOrg, userId, supabase, settings }: { ctxOrg: str
 async function ChannelsTab({ ctxOrg, supabase }: { ctxOrg: string; supabase: Db }) {
   const { data } = await supabase.from("chat_channel_accounts").select("id, channel, external_id, display_name, enabled, connected_at").eq("organization_id", ctxOrg).order("connected_at");
   const accounts = (data ?? []) as Array<{ id: string; channel: ChatChannel; external_id: string; display_name: string | null; enabled: boolean; connected_at: string }>;
+  // L'application de bureau n'a aucun secret : les clés ne se vérifient que sur le site web.
+  const desktop = process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1";
   const checks = [
-    { ok: Boolean(process.env.ANTHROPIC_API_KEY), label: "Clé IA Anthropic (ANTHROPIC_API_KEY)" },
-    { ok: Boolean(process.env.META_APP_SECRET), label: "Secret de l'application Meta (META_APP_SECRET)" },
-    { ok: Boolean(process.env.META_VERIFY_TOKEN), label: "Jeton de vérification du webhook (META_VERIFY_TOKEN)" },
+    ...(desktop
+      ? []
+      : [
+          { ok: Boolean(process.env.ANTHROPIC_API_KEY), label: "Clé IA Anthropic (ANTHROPIC_API_KEY)" },
+          { ok: Boolean(process.env.META_APP_SECRET), label: "Secret de l'application Meta (META_APP_SECRET)" },
+          { ok: Boolean(process.env.META_VERIFY_TOKEN), label: "Jeton de vérification du webhook (META_VERIFY_TOKEN)" },
+        ]),
     { ok: accounts.some((a) => a.enabled), label: "Au moins un compte relié" },
   ];
 
@@ -373,6 +387,11 @@ async function ChannelsTab({ ctxOrg, supabase }: { ctxOrg: string; supabase: Db 
               </li>
             ))}
           </ul>
+          {desktop && (
+            <p className="mt-3 text-[12px] text-muted-foreground">
+              Les clés (Anthropic, Meta) sont sur le site web : vérifiez-les depuis l&apos;onglet Canaux du site.
+            </p>
+          )}
           <div className="mt-4 rounded-lg border bg-secondary/40 p-3 text-[12px]">
             <p className="text-muted-foreground">URL du webhook à saisir chez Meta :</p>
             <p className="mt-1 select-all break-all font-mono text-[12px]">{publicEnv.siteUrl}/api/meta/webhook</p>
