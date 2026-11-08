@@ -5,9 +5,7 @@ import { z } from "zod";
 import { authorize, dbErrorMessage, parseForm } from "@/lib/actions";
 import type { ActionState } from "@/lib/action-state";
 import { uuid } from "@/lib/validation";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { deliver, handleIncoming } from "@/lib/chatbot/inbound";
-import type { ChatConversation } from "@/lib/chatbot/types";
+import { runChatOp } from "@/lib/chatbot/remote";
 
 const replySchema = z.object({
   conversation_id: uuid,
@@ -21,50 +19,11 @@ const replySchema = z.object({
 export async function sendStaffReply(_: ActionState, formData: FormData): Promise<ActionState> {
   const auth = await authorize("chatbot.inbox");
   if (auth.denied) return auth.denied;
-  const { ctx } = auth;
   const parsed = parseForm(replySchema, formData);
   if (parsed.error) return parsed.error;
-  const { conversation_id, body } = parsed.data;
-
-  const { data: conv } = await ctx.supabase.from("chat_conversations").select("*").eq("organization_id", ctx.org.id).eq("id", conversation_id).maybeSingle();
-  if (!conv) return { error: "Conversation introuvable." };
-  const conversation = conv as ChatConversation;
-
-  const { data: settings } = await ctx.supabase.from("chatbot_settings").select("human_pause_minutes").eq("organization_id", ctx.org.id).maybeSingle();
-  const pause = (settings?.human_pause_minutes as number | undefined) ?? 120;
-
-  // Envoi d'abord (le jeton n'est lisible que côté serveur), puis enregistrement.
-  const sent = await deliver(createAdminClient(), conversation, null, body);
-  const { error } = await ctx.supabase.from("chat_messages").insert({
-    organization_id: ctx.org.id,
-    conversation_id,
-    sender: "staff",
-    body,
-    staff_user_id: ctx.user.id,
-    external_id: sent.externalId,
-    delivery_error: sent.error,
-  });
-  if (error) return { error: dbErrorMessage(error) };
-
-  await ctx.supabase
-    .from("chat_conversations")
-    .update({
-      status: "human",
-      needs_human: false,
-      unread_count: 0,
-      bot_paused_until: new Date(Date.now() + pause * 60_000).toISOString(),
-      last_message_at: new Date().toISOString(),
-      last_message_preview: body.slice(0, 140),
-    })
-    .eq("organization_id", ctx.org.id)
-    .eq("id", conversation_id);
-  await createAdminClient().from("chat_events").insert({
-    organization_id: ctx.org.id, conversation_id, channel: conversation.channel, kind: "staff_reply",
-  });
-
+  const result = await runChatOp(auth.ctx, { op: "staff_reply", conversationId: parsed.data.conversation_id, body: parsed.data.body });
   revalidatePath("/chatbot");
-  if (sent.error) return { error: `Message enregistré mais non délivré : ${sent.error}` };
-  return { ok: true };
+  return result;
 }
 
 const statusSchema = z.object({
@@ -192,45 +151,22 @@ export async function simulatorSend(_: ActionState, formData: FormData): Promise
   if (auth.denied) return auth.denied;
   const parsed = parseForm(simulatorSchema, formData);
   if (parsed.error) return parsed.error;
-  const admin = createAdminClient();
-  const senderId = `simulateur-${auth.ctx.user.id}`;
-  // Le numéro testé peut changer d'un essai à l'autre : on le met à jour.
-  await admin
-    .from("chat_conversations")
-    .update({ contact_phone: parsed.data.phone || null })
-    .eq("organization_id", auth.ctx.org.id)
-    .eq("channel", "simulator")
-    .eq("external_user_id", senderId);
+  let result: ActionState;
   try {
-    const r = await handleIncoming(admin, {
-      organizationId: auth.ctx.org.id,
-      channel: "simulator",
-      accountId: null,
-      accountExternalId: null,
-      senderId,
-      senderName: `Test · ${auth.ctx.fullName}`,
-      senderPhone: parsed.data.phone || null,
-      messageId: null,
-      text: parsed.data.body,
-      isText: true,
-    });
-    revalidatePath("/chatbot");
-    return { ok: true, data: r };
+    result = await runChatOp(auth.ctx, { op: "simulator_send", body: parsed.data.body, phone: parsed.data.phone || null });
   } catch (err) {
-    return { error: (err as Error).message };
+    console.error("simulateur", err);
+    result = { error: "Le simulateur n'a pas pu traiter le message : réessayez." };
   }
+  revalidatePath("/chatbot");
+  return result;
 }
 
 /** Efface la conversation de test de l'utilisateur. */
 export async function simulatorReset(): Promise<ActionState> {
   const auth = await authorize("chatbot.manage");
   if (auth.denied) return auth.denied;
-  await createAdminClient()
-    .from("chat_conversations")
-    .delete()
-    .eq("organization_id", auth.ctx.org.id)
-    .eq("channel", "simulator")
-    .eq("external_user_id", `simulateur-${auth.ctx.user.id}`);
+  const result = await runChatOp(auth.ctx, { op: "simulator_reset" });
   revalidatePath("/chatbot");
-  return { ok: true };
+  return result;
 }

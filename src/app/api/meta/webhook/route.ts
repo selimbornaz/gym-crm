@@ -1,6 +1,5 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { serverEnv } from "@/lib/env";
 import { handleIncoming } from "@/lib/chatbot/inbound";
 import { parseMetaWebhook, verifyMetaSignature } from "@/lib/chatbot/meta";
 
@@ -11,7 +10,9 @@ export const maxDuration = 60;
 /** Vérification du webhook par Meta (une fois, lors de la configuration). */
 export function GET(request: NextRequest) {
   const p = request.nextUrl.searchParams;
-  if (p.get("hub.mode") === "subscribe" && p.get("hub.verify_token") === serverEnv.metaVerifyToken) {
+  const expected = process.env.META_VERIFY_TOKEN;
+  if (!expected) return new NextResponse("META_VERIFY_TOKEN non configuré", { status: 503 });
+  if (p.get("hub.mode") === "subscribe" && p.get("hub.verify_token") === expected) {
     return new NextResponse(p.get("hub.challenge") ?? "", { status: 200 });
   }
   return new NextResponse("Interdit", { status: 403 });
@@ -22,8 +23,10 @@ export function GET(request: NextRequest) {
  * (sinon Meta renvoie la notification), puis le bot traite chaque message.
  */
 export async function POST(request: NextRequest) {
+  const secret = process.env.META_APP_SECRET;
+  if (!secret) return new NextResponse("META_APP_SECRET non configuré", { status: 503 });
   const raw = await request.text();
-  if (!verifyMetaSignature(raw, request.headers.get("x-hub-signature-256"), serverEnv.metaAppSecret)) {
+  if (!verifyMetaSignature(raw, request.headers.get("x-hub-signature-256"), secret)) {
     return new NextResponse("Signature invalide", { status: 401 });
   }
 

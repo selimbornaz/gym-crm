@@ -37,7 +37,10 @@ export function AutoRefresh({ intervalMs = 6000 }: { intervalMs?: number }) {
 /** Fait défiler le fil jusqu'au dernier message. */
 export function ScrollToEnd({ trigger }: { trigger: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => ref.current?.scrollIntoView({ block: "end" }), [trigger]);
+  useEffect(() => {
+    // Défile seulement le fil de discussion, pas toute la page.
+    ref.current?.scrollIntoView({ block: "nearest" });
+  }, [trigger]);
   return <div ref={ref} />;
 }
 
@@ -197,7 +200,7 @@ export function SimulatorComposer() {
           variant="ghost"
           className="ml-auto"
           disabled={resetting}
-          onClick={() => startReset(async () => void (await simulatorReset()))}
+          onClick={() => startReset(async () => { const r = await simulatorReset(); if (r.error) toast.error(r.error); })}
         >
           <RotateCcw aria-hidden /> Recommencer
         </Button>
