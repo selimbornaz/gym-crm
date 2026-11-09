@@ -28,42 +28,6 @@ export async function createStaff(_: ActionState, formData: FormData): Promise<A
   if (auth.denied) return auth.denied;
   const parsed = parseForm(createSchema, formData);
   if (parsed.error) return parsed.error;
-<<<<<<< HEAD
-  const input = parsed.data;
-
-  // Le logiciel de bureau n'embarque aucune clé d'administration.
-  if (process.env.NEXT_PUBLIC_CASTLE_DESKTOP === "1") {
-    return { error: "Les invitations se font depuis le site web de Dopamine Fitness." };
-  }
-  const admin = createAdminClient();
-  const { data: existing } = await admin.from("profiles").select("id").eq("email", input.email).maybeSingle();
-
-  let userId = existing?.id as string | undefined;
-  if (userId) {
-    const { data: already } = await admin
-      .from("staff").select("id").eq("organization_id", ctx.org.id).eq("user_id", userId).maybeSingle();
-    if (already) return { fieldErrors: { email: "Cette personne fait déjà partie du personnel." } };
-  } else {
-    const { data, error } = await admin.auth.admin.inviteUserByEmail(input.email, {
-      data: { full_name: input.full_name },
-      redirectTo: `${publicEnv.siteUrl}/auth/confirm?next=/update-password`,
-    });
-    if (error || !data.user) return { error: `Invitation impossible : ${error?.message ?? "erreur inconnue"}` };
-    userId = data.user.id;
-  }
-
-  const { data: staff, error } = await admin
-    .from("staff")
-    .insert({ organization_id: ctx.org.id, user_id: userId, role: input.role, job_title: input.job_title ?? null })
-    .select("id")
-    .single();
-  if (error) return { error: dbErrorMessage(error) };
-
-  // Journalisation explicite de l'auteur (le service role n'a pas d'auth.uid()).
-  await admin.from("audit_logs").insert({
-    organization_id: ctx.org.id, actor_user_id: ctx.user.id, action: "staff.invite", entity_type: "staff",
-    entity_id: staff.id, after_data: { email: input.email, role: input.role },
-=======
   const d = parsed.data;
   const result = await runChatOp(auth.ctx, {
     op: "staff_create",
@@ -73,7 +37,6 @@ export async function createStaff(_: ActionState, formData: FormData): Promise<A
     role: d.role,
     jobTitle: d.job_title || null,
     createCoach: d.create_coach === "on",
->>>>>>> local-main/main
   });
   revalidatePath("/staff");
   return result;
