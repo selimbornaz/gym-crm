@@ -3,18 +3,28 @@ import type { ActionState } from "@/lib/action-state";
 import type { AppContext } from "@/lib/auth/context";
 import { publicEnv } from "@/lib/env";
 import type { Permission } from "@/lib/permissions";
+import type { StaffRole } from "@/lib/permissions";
+import { createStaffCore, resetStaffPasswordCore } from "@/lib/staff/service";
 import { simulatorResetCore, simulatorSendCore, staffReplyCore, type ChatActor } from "./service";
 
-/** Opérations du chatbot qui ont besoin des secrets du serveur. */
+/**
+ * Opérations qui ont besoin des secrets du serveur (chatbot, comptes du
+ * personnel). L'application de bureau n'en embarque aucun : elle les fait
+ * exécuter par le site web via /api/chatbot/remote.
+ */
 export type ChatOp =
   | { op: "staff_reply"; conversationId: string; body: string }
   | { op: "simulator_send"; body: string; phone: string | null }
-  | { op: "simulator_reset" };
+  | { op: "simulator_reset" }
+  | { op: "staff_create"; fullName: string; email: string; password: string; role: StaffRole; jobTitle: string | null; createCoach: boolean }
+  | { op: "staff_password"; staffId: string; password: string };
 
 export const OP_PERMISSION: Record<ChatOp["op"], Permission> = {
   staff_reply: "chatbot.inbox",
   simulator_send: "chatbot.manage",
   simulator_reset: "chatbot.manage",
+  staff_create: "staff.manage",
+  staff_password: "staff.manage",
 };
 
 export function runChatOpLocally(actor: ChatActor, op: ChatOp): Promise<ActionState> {
@@ -25,6 +35,12 @@ export function runChatOpLocally(actor: ChatActor, op: ChatOp): Promise<ActionSt
       return simulatorSendCore(actor, op.body, op.phone);
     case "simulator_reset":
       return simulatorResetCore(actor);
+    case "staff_create": {
+      const { op: _op, ...input } = op;
+      return createStaffCore({ userId: actor.userId, orgId: actor.orgId }, input);
+    }
+    case "staff_password":
+      return resetStaffPasswordCore({ userId: actor.userId, orgId: actor.orgId }, op.staffId, op.password);
   }
 }
 

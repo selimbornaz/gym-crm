@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { publicEnv } from "@/lib/env";
 import { OP_PERMISSION, runChatOpLocally, type ChatOp } from "@/lib/chatbot/remote";
+import { staffEmail, staffPassword, staffRole } from "@/lib/staff/schema";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -11,6 +12,17 @@ const bodySchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("staff_reply"), orgId: z.string().uuid(), conversationId: z.string().uuid(), body: z.string().trim().min(1).max(2000) }),
   z.object({ op: z.literal("simulator_send"), orgId: z.string().uuid(), body: z.string().trim().min(1).max(1000), phone: z.string().trim().max(30).nullable() }),
   z.object({ op: z.literal("simulator_reset"), orgId: z.string().uuid() }),
+  z.object({
+    op: z.literal("staff_create"),
+    orgId: z.string().uuid(),
+    fullName: z.string().trim().min(2).max(120),
+    email: staffEmail,
+    password: staffPassword,
+    role: staffRole,
+    jobTitle: z.string().trim().max(80).nullable(),
+    createCoach: z.boolean(),
+  }),
+  z.object({ op: z.literal("staff_password"), orgId: z.string().uuid(), staffId: z.string().uuid(), password: staffPassword }),
 ]);
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: { "cache-control": "no-store" } });

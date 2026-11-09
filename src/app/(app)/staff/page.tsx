@@ -8,7 +8,7 @@ import { requirePagePermission } from "@/lib/auth/context";
 import { formatDate } from "@/lib/format";
 import { t } from "@/i18n";
 import type { StaffRole } from "@/lib/permissions";
-import { InviteStaffDialog, StaffActions } from "./staff-dialogs";
+import { CreateStaffDialog, StaffActions } from "./staff-dialogs";
 
 export const metadata: Metadata = { title: "Employés" };
 
@@ -38,10 +38,10 @@ export default async function StaffPage() {
         title="Employés"
         description="Comptes, rôles et accès du personnel. Les changements sont journalisés."
         actions={
-          <InviteStaffDialog
+          <CreateStaffDialog
             trigger={
               <Button>
-                <UserPlus aria-hidden /> Inviter un employé
+                <UserPlus aria-hidden /> Ajouter un employé
               </Button>
             }
           />
