@@ -4,30 +4,31 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { authorize, dbErrorMessage, parseForm } from "@/lib/actions";
 import type { ActionState } from "@/lib/action-state";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { publicEnv } from "@/lib/env";
+import { runChatOp } from "@/lib/chatbot/remote";
+import { staffEmail, staffPassword, staffRole as roleSchema } from "@/lib/staff/schema";
 
-const roleSchema = z.enum(["owner", "receptionist", "coach"], { errorMap: () => ({ message: "Rôle requis" }) });
-
-const inviteSchema = z.object({
-  email: z.string().email("Email invalide").transform((v) => v.toLowerCase()),
-  full_name: z.string().min(2, "Nom requis").max(120),
-  role: roleSchema,
-  job_title: z.string().max(80).optional(),
-  create_coach: z.literal("on").optional(),
-});
+const createSchema = z
+  .object({
+    full_name: z.string().trim().min(2, "Nom requis").max(120),
+    email: staffEmail,
+    password: staffPassword,
+    password_confirm: z.string(),
+    role: roleSchema,
+    job_title: z.string().trim().max(80).optional(),
+    create_coach: z.literal("on").optional(),
+  })
+  .refine((v) => v.password === v.password_confirm, { path: ["password_confirm"], message: "Les deux mots de passe sont différents" });
 
 /**
- * Invite un employé. Le client « service role » n'est utilisé qu'APRÈS avoir
- * vérifié que l'appelant possède `staff.manage` dans la salle active, et
- * uniquement pour : créer/inviter le compte Auth et l'insérer dans CETTE salle.
+ * Crée directement le compte d'un employé (email + mot de passe choisis par le
+ * propriétaire, sans email d'invitation) et l'ajoute à la salle active.
  */
-export async function inviteStaff(_: ActionState, formData: FormData): Promise<ActionState> {
+export async function createStaff(_: ActionState, formData: FormData): Promise<ActionState> {
   const auth = await authorize("staff.manage");
   if (auth.denied) return auth.denied;
-  const { ctx } = auth;
-  const parsed = parseForm(inviteSchema, formData);
+  const parsed = parseForm(createSchema, formData);
   if (parsed.error) return parsed.error;
+<<<<<<< HEAD
   const input = parsed.data;
 
   // Le logiciel de bureau n'embarque aucune clé d'administration.
@@ -62,16 +63,33 @@ export async function inviteStaff(_: ActionState, formData: FormData): Promise<A
   await admin.from("audit_logs").insert({
     organization_id: ctx.org.id, actor_user_id: ctx.user.id, action: "staff.invite", entity_type: "staff",
     entity_id: staff.id, after_data: { email: input.email, role: input.role },
+=======
+  const d = parsed.data;
+  const result = await runChatOp(auth.ctx, {
+    op: "staff_create",
+    fullName: d.full_name,
+    email: d.email,
+    password: d.password,
+    role: d.role,
+    jobTitle: d.job_title || null,
+    createCoach: d.create_coach === "on",
+>>>>>>> local-main/main
   });
-
-  if (input.role === "coach" && input.create_coach === "on") {
-    await admin.from("coaches").insert({
-      organization_id: ctx.org.id, staff_id: staff.id, full_name: input.full_name, email: input.email,
-    });
-  }
-
   revalidatePath("/staff");
-  return { ok: true, message: existing ? "Employé ajouté à la salle." : `Invitation envoyée à ${input.email}.` };
+  return result;
+}
+
+const passwordSchema = z
+  .object({ staff_id: z.string().uuid(), password: staffPassword, password_confirm: z.string() })
+  .refine((v) => v.password === v.password_confirm, { path: ["password_confirm"], message: "Les deux mots de passe sont différents" });
+
+/** Nouveau mot de passe choisi par le propriétaire (employé qui l'a oublié). */
+export async function resetStaffPassword(_: ActionState, formData: FormData): Promise<ActionState> {
+  const auth = await authorize("staff.manage");
+  if (auth.denied) return auth.denied;
+  const parsed = parseForm(passwordSchema, formData);
+  if (parsed.error) return parsed.error;
+  return runChatOp(auth.ctx, { op: "staff_password", staffId: parsed.data.staff_id, password: parsed.data.password });
 }
 
 const updateSchema = z.object({
