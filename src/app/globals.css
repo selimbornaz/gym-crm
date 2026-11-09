@@ -185,6 +185,19 @@
   input[type="radio"] {
     accent-color: var(--primary);
   }
+  /*
+   * Listes déroulantes natives : la fenêtre des options ne sait pas afficher un
+   * fond translucide (verre). Sans fond opaque, le texte clair des options
+   * devenait invisible en mode sombre.
+   */
+  select option,
+  select optgroup {
+    background-color: var(--solid);
+    color: var(--foreground);
+  }
+  select option:disabled {
+    color: var(--subtle-foreground);
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       transition-duration: 0.01ms !important;
