@@ -1,7 +1,7 @@
 {
   "name": "castle-crm-desktop",
   "productName": "Dopamine Fitness",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Application de bureau de Dopamine Fitness : le même CRM que la version en ligne.",
   "author": "Dopamine Fitness",
